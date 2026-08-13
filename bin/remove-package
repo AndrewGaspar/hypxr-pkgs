@@ -98,9 +98,9 @@ make_dir_writable "$REPO_DIR"
 docker run --rm --platform linux/amd64 \
   -e ARCH="$ARCH" \
   -e MIRROR="$MIRROR" \
-  -v "$BUILD_ROOT/pkgs.omarchy.org:/pkgs.omarchy.org" \
+  -v "$BUILD_ROOT/repository:/repository" \
   -v "$BUILD_DIR:/build:ro" \
-  omarchy-pkg-builder:latest-x86_64-$MIRROR /build/remove-package.sh "$PACKAGE_NAME"
+  hypxr-pkg-builder:latest-x86_64-$MIRROR /build/remove-package.sh "$PACKAGE_NAME"
 
 RESULT=$?
 

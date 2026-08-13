@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -e
+
+BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
+source "$BUILD_ROOT/helpers/message-helpers.sh"
+source "$BUILD_ROOT/helpers/docker-helpers.sh"
+source "$BUILD_ROOT/helpers/paths.sh"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --arch)
+    ARCH="$2"
+    update_arch_paths
+    shift 2
+    ;;
+  --mirror)
+    MIRROR="$2"
+    update_arch_paths
+    shift 2
+    ;;
+  -h | --help)
+    echo "Usage: $0 [--arch <arch>] [--mirror <edge|stable>]"
+    exit 0
+    ;;
+  *)
+    print_error "Unknown option: $1"
+    exit 1
+    ;;
+  esac
+done
+
+if [[ -z ${GPG_PRIVATE_KEY:-} || -z ${GPG_PASSPHRASE:-} || -z ${HYPXR_SIGNING_FINGERPRINT:-} ]]; then
+  print_error "GPG_PRIVATE_KEY, GPG_PASSPHRASE, and HYPXR_SIGNING_FINGERPRINT must be set"
+  exit 1
+fi
+
+if [[ ! -d $REPO_DIR ]]; then
+  print_error "Repository directory not found: $REPO_DIR"
+  exit 1
+fi
+
+check_docker
+build_docker_image "$BUILD_DIR" x86_64 "$MIRROR"
+make_dir_writable "$REPO_DIR"
+
+docker run --rm --platform linux/amd64 \
+  -e ARCH="$ARCH" \
+  -e MIRROR="$MIRROR" \
+  -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
+  -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
+  -e HYPXR_SIGNING_FINGERPRINT="$HYPXR_SIGNING_FINGERPRINT" \
+  -v "$BUILD_ROOT/repository:/repository" \
+  -v "$BUILD_DIR:/build:ro" \
+  "hypxr-pkg-builder:latest-x86_64-$MIRROR" /build/sign-database.sh
+
+print_success "Repository databases signed"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Meta command for Omarchy repository management
+# Meta command for HypXR repository management.
 # Usage: ./bin/repo <command> [options]
 
 set -e
@@ -41,18 +41,20 @@ else
   LOG_FILE="$LOG_DIR/repo_${TIMESTAMP}.log"
 fi
 export LOG_FILE
-export OMARCHY_LOG_FILE="$LOG_FILE"
+export HYPXR_LOG_FILE="$LOG_FILE"
 
 # Show usage
 show_usage() {
   echo "Usage: $0 <command> [options]"
   echo ""
   echo "Commands:"
-  echo "  release     Run complete workflow: build → sign → promote → clean → update → sync"
+  echo "  release     Run complete workflow: build → sign → promote → clean → update → sign-db → sync"
   echo "  build       Build packages (unsigned)"
   echo "  sign        Sign all packages in build-output"
-  echo "  promote     Promote build to production (build-output → pkgs.omarchy.org)"
+  echo "  promote     Promote build to the repository tree"
   echo "  update      Update repository database"
+  echo "  sign-db     Sign the repository database"
+  echo "  verify-db   Verify database signatures and expected signing key"
   echo "  clean       Clean old package versions"
   echo "  migrate     Migrate edge packages into stable (no overwrite), then clean + update"
   echo "  list        List source package metadata (use --repo for published repo)"
@@ -70,7 +72,8 @@ show_usage() {
   echo "  $0 promote"
   echo "  $0 clean"
   echo "  $0 update"
-  echo "  $0 sync pkgs.omarchy.org/x86_64"
+  echo "  $0 sign-db"
+  echo "  $0 sync"
   echo ""
   echo "For command-specific help, use:"
   echo "  $0 <command> --help"
@@ -98,6 +101,14 @@ build)
   ;;
 sign)
   "$SCRIPT_DIR/sign" "$@" 2>&1 | tee "$LOG_FILE"
+  exit ${PIPESTATUS[0]}
+  ;;
+sign-db)
+  "$SCRIPT_DIR/sign-database" "$@" 2>&1 | tee "$LOG_FILE"
+  exit ${PIPESTATUS[0]}
+  ;;
+verify-db)
+  "$SCRIPT_DIR/verify-database" "$@" 2>&1 | tee "$LOG_FILE"
   exit ${PIPESTATUS[0]}
   ;;
 promote)

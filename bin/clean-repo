@@ -1,5 +1,5 @@
 #!/bin/bash
-# Omarchy Repository Cleaner
+# HypXR Repository Cleaner
 # Removes old package versions keeping only the latest
 
 set -e
@@ -145,7 +145,7 @@ show_disk_usage() {
 
 # Main execution
 main() {
-  print_header "Omarchy Repository Cleaner"
+  print_header "HypXR Repository Cleaner"
   
   # Parse command line arguments
   DRY_RUN=false

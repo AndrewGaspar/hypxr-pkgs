@@ -1,0 +1,4 @@
+# XREAL Air 2 Ultra access absent from Arch's xr-hardware 1.1.1.
+# The unique filename and exact product match make this inert once upstream's
+# rule arrives, while keeping the HypXRland runtime usable in the meantime.
+ATTRS{idVendor}=="3318", ATTRS{idProduct}=="0426", TAG+="uaccess", ENV{ID_xrhardware}="1"

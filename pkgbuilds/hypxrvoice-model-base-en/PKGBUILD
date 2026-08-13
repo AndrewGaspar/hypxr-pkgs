@@ -1,0 +1,31 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=hypxrvoice-model-base-en
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Whisper base.en speech model for HypXRVoice'
+arch=('any')
+url='https://github.com/openai/whisper'
+license=('MIT')
+
+source=(
+  'ggml-base.en.bin::https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin'
+  'LICENSE.whisper::https://raw.githubusercontent.com/openai/whisper/5f86d1d86363843179951550570367b37c5d6f78/LICENSE'
+)
+sha256sums=(
+  'a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002'
+  'b5d65a59060e68c4ff940e1eddfa6f94b2d68fdf58ed7f4dd57721c997e35e9d'
+)
+
+check() {
+  printf '%s  %s\n' \
+    'a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002' \
+    "$srcdir/ggml-base.en.bin" | sha256sum -c -
+}
+
+package() {
+  install -Dm644 "$srcdir/ggml-base.en.bin" \
+    "$pkgdir/usr/share/hypxrvoice/models/ggml-base.en.bin"
+  install -Dm644 "$srcdir/LICENSE.whisper" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

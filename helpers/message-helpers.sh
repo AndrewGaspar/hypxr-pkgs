@@ -1,4 +1,4 @@
-# Common printing functions for Omarchy scripts
+# Common printing functions for HypXR repository scripts.
 
 # Colors
 RED='\033[0;31m'

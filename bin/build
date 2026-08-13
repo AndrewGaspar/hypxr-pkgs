@@ -9,7 +9,7 @@ source "$BUILD_ROOT/helpers/message-helpers.sh"
 source "$BUILD_ROOT/helpers/docker-helpers.sh"
 source "$BUILD_ROOT/helpers/paths.sh"
 
-print_header "Omarchy Package Builder"
+print_header "HypXR Package Builder"
 
 DRY_RUN=false
 
@@ -144,14 +144,14 @@ DOCKER_ARGS=(
   -e MIRROR="$MIRROR"
   -e PACKAGES="$PACKAGES"
   -v "$BUILD_ROOT/build-output:/build-output"
-  -v "$BUILD_ROOT/pkgs.omarchy.org:/pkgs.omarchy.org"
+  -v "$BUILD_ROOT/repository:/repository"
   -v "$BUILD_DIR:/build:ro"
   -v "$BUILD_ROOT/helpers:/helpers:ro"
   -v "$BUILD_ROOT/pkgbuilds:/pkgbuilds:ro"
 )
 
 # Run the builder with assembled args
-IMAGE_TAG="omarchy-pkg-builder:latest-$ARCH-$MIRROR"
+IMAGE_TAG="hypxr-pkg-builder:latest-$ARCH-$MIRROR"
 PLATFORM_ARG=$(get_platform_arg "$ARCH")
 
 docker run $PLATFORM_ARG "${DOCKER_ARGS[@]}" "$IMAGE_TAG" /build/build.sh

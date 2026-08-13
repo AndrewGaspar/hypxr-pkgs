@@ -42,7 +42,7 @@ while [[ $# -gt 0 ]]; do
     echo "  --arch <arch>         Target architecture (x86_64 or aarch64, default: x86_64)"
     echo "  --package <name>      Migrate only the specified package"
     echo "  --dry-run             Preview migration and cleanup without changing files"
-    echo "  --sync-remote <path>  Rclone remote for sync (default: pkgs.omarchy.org:omarchy-pkgs)"
+    echo "  --sync-remote <path>  Rclone remote for sync (default: hypxr:packages)"
     echo "  --skip-prod-check     Skip production environment check during sync"
     echo "  -h, --help            Show this help message"
     echo ""
@@ -50,7 +50,8 @@ while [[ $# -gt 0 ]]; do
     echo "  1) Rsync tested package artifacts from edge -> stable (without overwriting existing files)"
     echo "  2) Run stable cleanup (keep 2 versions)"
     echo "  3) Update stable repository database"
-    echo "  4) Sync stable repository to remote (prompts for confirmation)"
+    echo "  4) Sign the stable repository database"
+    echo "  5) Sync stable repository to remote (prompts for confirmation)"
     exit 0
     ;;
   *)
@@ -60,8 +61,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-SOURCE_DIR="$BUILD_ROOT/pkgs.omarchy.org/edge/$ARCH"
-TARGET_DIR="$BUILD_ROOT/pkgs.omarchy.org/stable/$ARCH"
+SOURCE_DIR="$BUILD_ROOT/repository/edge/$ARCH"
+TARGET_DIR="$BUILD_ROOT/repository/stable/$ARCH"
 
 print_header "Promote Edge Artifacts to Stable"
 print_info "Architecture: $ARCH"
@@ -108,6 +109,8 @@ else
   "$BUILD_ROOT/bin/repo" clean --mirror stable --arch "$ARCH"
   print_info "Updating stable repository database..."
   "$BUILD_ROOT/bin/repo" update --mirror stable --arch "$ARCH"
+  print_info "Signing stable repository database..."
+  "$BUILD_ROOT/bin/repo" sign-db --mirror stable --arch "$ARCH"
 fi
 
 if [[ "$DRY_RUN" != true ]]; then

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Upload prebuilt packages: sign → promote → update → sync
+# Upload prebuilt packages: sign → promote → update → sign DB → sync.
 
 set -e
 
@@ -29,4 +29,5 @@ done
 "$SCRIPT_DIR/repo" sign "${COMMON_ARGS[@]}"
 "$SCRIPT_DIR/repo" promote "${COMMON_ARGS[@]}"
 "$SCRIPT_DIR/repo" update "${COMMON_ARGS[@]}"
+"$SCRIPT_DIR/repo" sign-db "${COMMON_ARGS[@]}"
 "$SCRIPT_DIR/repo" sync "${COMMON_ARGS[@]}" "${SYNC_ARGS[@]}"

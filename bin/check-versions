@@ -9,7 +9,7 @@ source "$BUILD_ROOT/helpers/message-helpers.sh"
 source "$BUILD_ROOT/helpers/paths.sh"
 source "$BUILD_ROOT/helpers/package-metadata.sh"
 
-STATE_DIR="${OMARCHY_STATE_DIR:-/root/.state}"
+STATE_DIR="${HYPXR_STATE_DIR:-/root/.hypxr/state}"
 ARCH="${ARCH:-x86_64}"
 
 mkdir -p "$STATE_DIR"
@@ -19,7 +19,7 @@ print_header "Package Version Check"
 get_repo_version() {
   local pkg="$1"
   local mirror="$2"
-  local repo_db="$BUILD_ROOT/pkgs.omarchy.org/$mirror/$ARCH/omarchy.db.tar.zst"
+  local repo_db="$BUILD_ROOT/repository/$mirror/$ARCH/hypxr.db.tar.zst"
 
   [[ -f "$repo_db" ]] || return 0
 

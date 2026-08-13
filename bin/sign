@@ -66,6 +66,11 @@ if [[ -z "$GPG_PASSPHRASE" ]]; then
   exit 1
 fi
 
+if [[ -z ${HYPXR_SIGNING_FINGERPRINT:-} ]]; then
+  print_error "HYPXR_SIGNING_FINGERPRINT environment variable not set"
+  exit 1
+fi
+
 # Build/update the Docker image (always use x86_64 for signing - it's architecture independent)
 build_docker_image "$BUILD_DIR" "x86_64" "$MIRROR"
 
@@ -80,9 +85,10 @@ docker run --rm --platform linux/amd64 \
   -e MIRROR="$MIRROR" \
   -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
   -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
+  -e HYPXR_SIGNING_FINGERPRINT="$HYPXR_SIGNING_FINGERPRINT" \
   -v "$BUILD_ROOT/build-output:/build-output" \
   -v "$BUILD_DIR:/build:ro" \
-  omarchy-pkg-builder:latest-x86_64-$MIRROR /build/sign.sh
+  hypxr-pkg-builder:latest-x86_64-$MIRROR /build/sign.sh
 
 SIGN_RESULT=$?
 

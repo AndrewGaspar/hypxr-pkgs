@@ -83,7 +83,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 list_repo_packages() {
-  local db_file="$REPO_DIR/omarchy.db.tar.zst"
+  local db_file="$REPO_DIR/hypxr.db.tar.zst"
 
   if [[ ! -f "$db_file" ]]; then
     echo "Repository database not found: $db_file" >&2

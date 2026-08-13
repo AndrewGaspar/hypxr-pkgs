@@ -1,0 +1,154 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=monado-xreal
+pkgver=25.1.0.20260719.1.g3752d437c
+pkgrel=1
+pkgdesc='HypXRland Monado runtime for XREAL Air displays'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/monado'
+license=('BSL-1.0' 'Apache-2.0' 'BSD-3-Clause' 'MIT')
+depends=(
+  'cjson'
+  'gcc-libs'
+  'glibc'
+  'hidapi'
+  'libdrm'
+  'libglvnd'
+  'libusb'
+  'libx11'
+  'libxcb'
+  'libxrandr'
+  'mesa'
+  'systemd-libs'
+  'vulkan-icd-loader'
+  'wayland'
+)
+makedepends=(
+  'cmake'
+  'eigen'
+  'gcc'
+  'glslang'
+  'libcap'
+  'ninja'
+  'pkgconf'
+  'python'
+  'shaderc'
+  'spirv-tools'
+  'vulkan-headers'
+  'wayland-protocols'
+)
+optdepends=('xr-hardware: access rules for additional XR hardware')
+options=('!debug')
+
+_commit=3752d437c5c0b24df659ac749629ac8ead7e1bae
+source=(
+  "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
+  'monado-xreal.service'
+  'openxr_monado-xreal.json'
+  '71-hypxr-xreal-ultra.rules'
+)
+sha256sums=(
+  '68389c23383e2e8e4b7637c0e37fa04a03c8002c1086c422f1f514153cbb5f85'
+  'f2521bd19f92ef2bdd28ee06828900043e840f86e9f439c7f4a921ffdbeee385'
+  '0018a8db6f14fe3a2199b82049d3a5b213f03f9e1c1e7e8a925d0dd6806cc063'
+  '3782597be344cb6a0e802537434ddf62821f6c2600d2996b766c82548c40a930'
+)
+
+build() {
+  export CXXFLAGS="$CXXFLAGS -include cstdint"
+  cmake -S "monado-$_commit" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF \
+    -DGIT_DESC="${_commit:0:9}" \
+    -DXRT_BUILD_DRIVER_ARDUINO=OFF \
+    -DXRT_BUILD_DRIVER_BLUBUR_S1=OFF \
+    -DXRT_BUILD_DRIVER_DAYDREAM=OFF \
+    -DXRT_BUILD_DRIVER_EUROC=OFF \
+    -DXRT_BUILD_DRIVER_HDK=OFF \
+    -DXRT_BUILD_DRIVER_HYDRA=OFF \
+    -DXRT_BUILD_DRIVER_NS=OFF \
+    -DXRT_BUILD_DRIVER_OHMD=OFF \
+    -DXRT_BUILD_DRIVER_OPENGLOVES=OFF \
+    -DXRT_BUILD_DRIVER_PSMV=OFF \
+    -DXRT_BUILD_DRIVER_PSSENSE=OFF \
+    -DXRT_BUILD_DRIVER_PSVR=OFF \
+    -DXRT_BUILD_DRIVER_PSVR2=OFF \
+    -DXRT_BUILD_DRIVER_QWERTY=OFF \
+    -DXRT_BUILD_DRIVER_REMOTE=OFF \
+    -DXRT_BUILD_DRIVER_RIFT=OFF \
+    -DXRT_BUILD_DRIVER_RIFT_S=OFF \
+    -DXRT_BUILD_DRIVER_ROKID=OFF \
+    -DXRT_BUILD_DRIVER_SIMULATED=OFF \
+    -DXRT_BUILD_DRIVER_SOLARXR=OFF \
+    -DXRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE=OFF \
+    -DXRT_BUILD_DRIVER_SURVIVE=OFF \
+    -DXRT_BUILD_DRIVER_TWRAP=OFF \
+    -DXRT_BUILD_DRIVER_VF=OFF \
+    -DXRT_BUILD_DRIVER_VIVE=OFF \
+    -DXRT_BUILD_DRIVER_WMR=OFF \
+    -DXRT_BUILD_DRIVER_XREAL_AIR=ON \
+    -DXRT_BUILD_SAMPLES=OFF \
+    -DXRT_FEATURE_DEBUG_GUI=OFF \
+    -DXRT_FEATURE_RENDERDOC=OFF \
+    -DXRT_FEATURE_SERVICE=ON \
+    -DXRT_FEATURE_SERVICE_SYSTEMD=OFF \
+    -DXRT_FEATURE_SLAM=OFF \
+    -DXRT_FEATURE_STEAMVR_PLUGIN=OFF \
+    -DXRT_FEATURE_WINDOW_PEEK=OFF \
+    -DXRT_HAVE_DBUS=OFF \
+    -DXRT_HAVE_HIDAPI=ON \
+    -DXRT_HAVE_LIBUDEV=ON \
+    -DXRT_HAVE_OPENCV=OFF \
+    -DXRT_HAVE_SYSTEM_CJSON=ON \
+    -DXRT_HAVE_SYSTEMD=OFF \
+    -DXRT_HAVE_WAYLAND=ON \
+    -DXRT_HAVE_WAYLAND_DIRECT=ON \
+    -DXRT_INSTALL_SYSTEMD_UNIT_FILES=OFF \
+    -DXRT_IPC_MSG_SOCK_FILENAME=monado-xreal/comp_ipc \
+    -DXRT_IPC_SERVICE_PID_FILENAME=monado-xreal.pid \
+    -DXRT_MODULE_COMPOSITOR_MAIN=ON \
+    -DXRT_MODULE_COMPOSITOR_NULL=OFF \
+    -DXRT_MODULE_MONADO_CLI=OFF \
+    -DXRT_MODULE_MONADO_GUI=OFF \
+    -DXRT_OXR_RUNTIME_SUFFIX=monado_xreal
+  cmake --build build --target monado-service openxr_monado_xreal monado
+}
+
+check() {
+  grep -q '^XRT_BUILD_DRIVER_XREAL_AIR:BOOL=ON$' build/CMakeCache.txt
+  grep -q '^XRT_HAVE_WAYLAND:BOOL=ON$' build/CMakeCache.txt
+  grep -F '/usr/lib/monado-xreal/libopenxr_monado_xreal.so' \
+    openxr_monado-xreal.json
+  ! getcap build/src/xrt/targets/service/monado-service | grep -q .
+  grep -F 'ATTRS{idVendor}=="3318", ATTRS{idProduct}=="0426"' \
+    71-hypxr-xreal-ultra.rules
+}
+
+package() {
+  install -Dm755 build/src/xrt/targets/service/monado-service \
+    "$pkgdir/usr/lib/monado-xreal/monado-service"
+  install -Dm755 build/src/xrt/targets/openxr/libopenxr_monado_xreal.so \
+    "$pkgdir/usr/lib/monado-xreal/libopenxr_monado_xreal.so"
+  install -Dm755 build/src/xrt/targets/libmonado/libmonado.so.25.1.0 \
+    "$pkgdir/usr/lib/monado-xreal/libmonado.so.25.1.0"
+  ln -s libmonado.so.25.1.0 \
+    "$pkgdir/usr/lib/monado-xreal/libmonado.so.25"
+  ln -s libmonado.so.25 \
+    "$pkgdir/usr/lib/monado-xreal/libmonado.so"
+  install -Dm644 monado-xreal.service \
+    "$pkgdir/usr/lib/systemd/user/monado-xreal.service"
+  install -Dm644 openxr_monado-xreal.json \
+    "$pkgdir/usr/share/openxr/1/openxr_monado-xreal.json"
+  install -Dm644 71-hypxr-xreal-ultra.rules \
+    "$pkgdir/usr/lib/udev/rules.d/71-hypxr-xreal-ultra.rules"
+
+  install -Dm644 "monado-$_commit/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "monado-$_commit/src/external/tinyceres/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.tinyceres-BSD-3-Clause"
+  install -Dm644 "monado-$_commit/src/external/stb/stb_image_write.h" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.stb-MIT"
+  install -Dm644 "monado-$_commit/README.md" \
+    "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

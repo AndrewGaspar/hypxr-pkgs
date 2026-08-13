@@ -1,0 +1,139 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=wivrn-hypxr
+pkgver=26.6.2.20260803.1.gd5cb02968
+pkgrel=1
+_upstream_version=26.6.2
+_wivrn_compat=26.6.2-1
+_commit=d5cb02968d9e464c40ab6377fcee4f70aeb469af
+_monado_commit=1b526bb3a0ff326ecd05af4c2c541407f53c6d4b
+pkgdesc='HypXRland-patched WiVRn OpenXR streaming server'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/WiVRn'
+license=(
+  'GPL-3.0-or-later'
+  'Apache-2.0'
+  'Apache-2.0 WITH LLVM-exception'
+  'BSL-1.0'
+  'MIT'
+  'OFL-1.1'
+)
+depends=(
+  'avahi'
+  'boost-libs'
+  'cairo'
+  'ffmpeg'
+  'gcc-libs'
+  'glib2'
+  'glibc'
+  'libarchive'
+  'libbsd'
+  'libdrm'
+  'libgl'
+  'libnotify'
+  'libpipewire'
+  'libpng'
+  'librsvg'
+  'libx11'
+  'libxcb'
+  'openssl'
+  'openxr'
+  'systemd-libs'
+  'vulkan-icd-loader'
+)
+makedepends=(
+  'boost'
+  'cli11'
+  'cmake>=3.28'
+  'eigen'
+  'gcc'
+  'git'
+  'glib2-devel'
+  'glslang'
+  'ninja'
+  'nlohmann-json'
+  'patch'
+  'pkgconf'
+  'spirv-tools'
+  'vulkan-headers'
+)
+provides=(
+  'openxr-runtime'
+  "wivrn-server=$_wivrn_compat"
+)
+conflicts=('wivrn-server')
+options=('!debug')
+
+source=(
+  "wivrn-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
+  "monado-$_monado_commit.tar.gz::https://gitlab.freedesktop.org/monado/monado/-/archive/$_monado_commit/monado-$_monado_commit.tar.gz"
+  'LICENSE.Apache-2.0-LLVM-exception::https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-22.1.0/LICENSE.TXT'
+)
+sha256sums=(
+  '012a9e763d8855ab40ced7e08543a6d9aeb5b704839bf5fb449c525aa055af2a'
+  'a1af1810262d54987bd68c8b74516c39eadb37a5aa850911614fca824c8d8c94'
+  '8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee'
+)
+
+prepare() {
+  local patch_file
+
+  for patch_file in "WiVRn-$_commit"/patches/monado/*.patch; do
+    patch -d "monado-$_monado_commit" -p1 --forward < "$patch_file"
+  done
+}
+
+build() {
+  cmake -S "WiVRn-$_commit" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DFETCHCONTENT_SOURCE_DIR_MONADO="$srcdir/monado-$_monado_commit" \
+    -DGIT_DESC="v$_upstream_version" \
+    -DGIT_COMMIT="$_commit" \
+    -DWIVRN_BUILD_CLIENT=OFF \
+    -DWIVRN_BUILD_DASHBOARD=OFF \
+    -DWIVRN_BUILD_DISSECTOR=OFF \
+    -DWIVRN_BUILD_SERVER=ON \
+    -DWIVRN_BUILD_SERVER_LIBRARY=ON \
+    -DWIVRN_BUILD_TEST=OFF \
+    -DWIVRN_BUILD_WIVRNCTL=ON \
+    -DWIVRN_OPENXR_MANIFEST_TYPE=relative \
+    -DWIVRN_USE_NVENC=ON \
+    -DWIVRN_USE_PIPEWIRE=ON \
+    -DWIVRN_USE_SYSTEM_BOOST=ON \
+    -DWIVRN_USE_SYSTEMD=ON \
+    -DWIVRN_USE_SYSTEM_OPENXR=ON \
+    -DWIVRN_USE_VAAPI=ON \
+    -DWIVRN_USE_VULKAN_ENCODE=ON \
+    -DWIVRN_USE_X264=OFF
+  cmake --build build
+}
+
+check() {
+  test -x build/server/wivrn-server
+  test -x build/server/wivrnctl
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+
+  rm -f "$pkgdir/usr/lib/firewalld/services/wivrn.xml"
+  rmdir "$pkgdir/usr/lib/firewalld/services" "$pkgdir/usr/lib/firewalld" 2>/dev/null || true
+  test -x "$pkgdir/usr/bin/wivrn-server"
+  test -x "$pkgdir/usr/bin/wivrnctl"
+  grep -F 'libopenxr_wivrn.so' \
+    "$pkgdir/usr/share/openxr/1/openxr_wivrn.json"
+
+  install -Dm644 "WiVRn-$_commit/COPYING" \
+    "$pkgdir/usr/share/licenses/$pkgname/COPYING"
+  install -Dm644 "WiVRn-$_commit/LICENSE-OFL-1.1" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE-OFL-1.1"
+  install -Dm644 LICENSE.Apache-2.0-LLVM-exception \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.Apache-2.0-LLVM-exception"
+  install -Dm644 "WiVRn-$_commit/external/renderdoc_app.h" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.renderdoc-MIT"
+  install -Dm644 "monado-$_monado_commit/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.monado-BSL-1.0"
+  install -Dm644 "WiVRn-$_commit/README.md" \
+    "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

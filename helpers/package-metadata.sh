@@ -1,4 +1,4 @@
-# Package metadata helpers for Omarchy package build tooling
+# Package metadata helpers inherited from the Omarchy package build tooling.
 #
 # Expects package directories in $PKGBUILDS_DIR, each with:
 #   .omarchy/package.json

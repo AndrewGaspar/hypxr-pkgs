@@ -1,0 +1,29 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=hypxrland-stack
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Complete HypXRland runtime stack for Arch Linux'
+arch=('any')
+url='https://github.com/AndrewGaspar/Hyprland'
+license=('MIT')
+depends=(
+  'hypxrland'
+  'hypxrhud'
+  'hypxrpaper'
+  'hypxrva'
+  'hypxrvoice'
+  'hypxrvoice-model-base-en'
+  'wivrn-hypxr'
+)
+optdepends=('monado-xreal: private OpenXR runtime for XREAL Air headsets')
+source=('README.md' 'LICENSE')
+sha256sums=(
+  '8f905a3638ad4d0075839715e95d8621d760464e6e5aaa4a6f705ee32c2e99d1'
+  '74d049fa7a0860aa2985a167b21c407e49c70eebf665813be444a7da2a16f0fe'
+)
+
+package() {
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

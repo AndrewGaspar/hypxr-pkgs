@@ -1,5 +1,5 @@
 #!/bin/bash
-# Omarchy Repository Database Manager
+# HypXR Repository Database Manager
 # Updates the repository database with all packages
 
 set -e
@@ -34,14 +34,14 @@ update_database() {
   docker run --rm --platform linux/amd64 \
     -e ARCH="$ARCH" \
     -e MIRROR="$MIRROR" \
-    -v "$BUILD_ROOT/pkgs.omarchy.org:/output" \
+    -v "$BUILD_ROOT/repository:/output" \
     -v "$BUILD_DIR:/build:ro" \
-    omarchy-pkg-builder:latest-x86_64-$MIRROR /build/update-repo.sh
+    hypxr-pkg-builder:latest-x86_64-$MIRROR /build/update-repo.sh
 }
 
 # Main execution
 main() {
-  print_header "Omarchy Repository Database Manager"
+  print_header "HypXR Repository Database Manager"
 
   # Parse command line arguments
   while [[ $# -gt 0 ]]; do

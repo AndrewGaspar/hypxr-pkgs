@@ -1,5 +1,5 @@
 # ==============================================================================
-# Omarchy Package Builder - Multi-Architecture
+# HypXR Package Builder - Multi-Architecture
 # Supports: x86_64 (Arch Linux) and aarch64 (Arch Linux ARM)
 # ==============================================================================
 
@@ -107,7 +107,7 @@ RUN ln -sf /usr/lib/os-release /etc/os-release && \
 # Note: Repository is removed at the end since build scripts add it dynamically
 RUN pacman-key --recv-keys 40DFB630FF42BCFFB047046CF0134EE680CAC571 --keyserver keys.openpgp.org && \
     pacman-key --lsign-key 40DFB630FF42BCFFB047046CF0134EE680CAC571 && \
-    printf '\n[omarchy]\nSigLevel = Optional\nServer = https://pkgs.omarchy.org/$arch\n' >> /etc/pacman.conf && \
+    printf '\n[omarchy]\nSigLevel = PackageRequired DatabaseOptional TrustedOnly\nServer = https://pkgs.omarchy.org/stable/$arch\n' >> /etc/pacman.conf && \
     pacman -Sy --noconfirm && \
     pacman -S --noconfirm omarchy-keyring && \
     pacman-key --populate omarchy && \
@@ -148,7 +148,7 @@ WORKDIR /src
 
 CMD ["/bin/bash"]
 
-LABEL maintainer="Omarchy <https://omarchy.org>"
+LABEL maintainer="HypXRland <https://github.com/AndrewGaspar/Hyprland>"
 LABEL description="Multi-architecture Arch Linux package build environment"
 LABEL version="2.0"
 LABEL architectures="x86_64,aarch64"

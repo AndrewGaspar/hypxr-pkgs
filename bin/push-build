@@ -15,8 +15,8 @@ source "$BUILD_ROOT/helpers/paths.sh"
 source "$BUILD_ROOT/helpers/host-helpers.sh"
 
 HOST=""
-REMOTE_ROOT="/root/omarchy-pkgs"
-CREDENTIALS="/root/.omarchy/build-credentials"
+REMOTE_ROOT="/root/hypxr-pkgs"
+CREDENTIALS="/root/.hypxr/build-credentials"
 PACKAGES=""
 PACKAGE_FLAG_GIVEN=false
 DRY_RUN=false
@@ -80,7 +80,7 @@ while [[ $# -gt 0 ]]; do
     echo "  --arch <arch>          Target architecture (default: x86_64)"
     echo "  --mirror <mirror>      Mirror to publish to (edge or stable, default: edge)"
     echo "  --package <names>      Only push these packages (space-separated)"
-    echo "  --host <host>          ssh destination (default: \$OMARCHY_REPO_HOST or .repo-host)"
+    echo "  --host <host>          ssh destination (default: \$HYPXR_REPO_HOST or .repo-host)"
     echo "  --remote-root <path>   Repository path on the host (default: $REMOTE_ROOT)"
     echo "  --dry-run              Show what would be pushed, transfer nothing"
     echo "  -y, --yes              Do not ask for confirmation"

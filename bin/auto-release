@@ -9,7 +9,7 @@ BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
 source "$BUILD_ROOT/helpers/message-helpers.sh"
 
 MIRROR="${1:-}"
-STATE_DIR="${OMARCHY_STATE_DIR:-/root/.state}"
+STATE_DIR="${HYPXR_STATE_DIR:-/root/.hypxr/state}"
 
 if [[ -z "$MIRROR" ]]; then
   print_error "Usage: $0 <mirror>"

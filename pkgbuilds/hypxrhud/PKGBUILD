@@ -1,0 +1,59 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=hypxrhud
+pkgver=0.20260714.1.g4799bc427
+pkgrel=1
+pkgdesc='Shared OpenXR HUD daemon for HypXRland'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/hypxrhud'
+license=('BSD-3-Clause' 'MIT' 'OFL-1.1')
+depends=(
+  'dbus'
+  'gcc-libs'
+  'glibc'
+  'jansson'
+  'libdrm'
+  'libglvnd'
+  'mesa'
+  'openxr'
+  'systemd-libs'
+)
+makedepends=(
+  'cmake'
+  'gcc'
+  'ninja'
+  'pkgconf'
+)
+options=('!debug')
+
+_commit=4799bc42721f11fca9b02fcad004062087c31947
+source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('ebaf5a414c584668988e72dc22ecb3686a1a32575db9d35024ae3f553b44011e')
+
+build() {
+  cmake -S "$pkgname-$_commit" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib
+  grep -q '^xrdeps_FOUND:INTERNAL=1$' build/CMakeCache.txt
+  cmake --build build
+}
+
+check() {
+  ctest --test-dir build --output-on-failure
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+
+  install -Dm644 "$pkgname-$_commit/README.md" \
+    "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 "$pkgname-$_commit/examples/battery.toml" \
+    "$pkgdir/usr/share/doc/$pkgname/battery.toml"
+  install -Dm644 "$pkgname-$_commit/third_party/fonts/LiberationMono-OFL.txt" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.OFL-1.1"
+  install -Dm644 "$pkgname-$_commit/third_party/stb_image_write.h" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.stb_image_write"
+  install -Dm644 "$pkgname-$_commit/third_party/stb_truetype.h" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.stb_truetype"
+}

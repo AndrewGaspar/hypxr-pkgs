@@ -166,7 +166,7 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc=""
 arch=('any')
-url="https://omarchy.org"
+url="https://github.com/AndrewGaspar/Hyprland"
 license=('MIT')
 
 package() {

@@ -6,14 +6,14 @@ set -e
 ARCH=${ARCH:-x86_64}
 MIRROR=${MIRROR:-edge}
 OUTPUT_DIR="/output/$MIRROR/$ARCH"
-REPO_NAME="omarchy"
+REPO_NAME="hypxr"
 DB_FILE="$OUTPUT_DIR/${REPO_NAME}.db.tar.zst"
 
 cd "$OUTPUT_DIR"
 
 # Remove old database files (repo-add will create new ones)
-rm -f "${REPO_NAME}.db" "${REPO_NAME}.db.tar.zst"
-rm -f "${REPO_NAME}.files" "${REPO_NAME}.files.tar.zst"
+rm -f "${REPO_NAME}.db" "${REPO_NAME}.db.tar.zst" "${REPO_NAME}.db"*.sig
+rm -f "${REPO_NAME}.files" "${REPO_NAME}.files.tar.zst" "${REPO_NAME}.files"*.sig
 
 # Check if there are any packages
 if ! ls *.pkg.tar.* 1>/dev/null 2>&1; then

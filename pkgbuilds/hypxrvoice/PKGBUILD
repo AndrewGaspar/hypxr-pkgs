@@ -1,0 +1,99 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=hypxrvoice
+pkgver=0.20260802.1.g9e899bbff
+pkgrel=1
+pkgdesc='Local-first voice control daemon for HypXRland'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/hypxrvoice'
+license=('BSD-3-Clause' 'MIT')
+depends=(
+  'gcc-libs'
+  'glibc'
+  'hypxrhud'
+  'hypxrvoice-model-base-en'
+  'jansson'
+  'libpipewire'
+  'libsndfile'
+  'systemd-libs'
+)
+makedepends=(
+  'cmake'
+  'gcc'
+  'ninja'
+  'pkgconf'
+)
+optdepends=('espeak-ng: spoken responses')
+options=('!debug')
+
+_commit=9e899bbffbd9c7817ab8e1fc80cf512aed6f98fc
+_whisper_commit=080bbbe85230f624f0b52127f1ae1218247989f9
+_llama_commit=961e4b26a7dd0e01e20599b27d709a74788ecb55
+source=(
+  "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
+  "whisper.cpp-$_whisper_commit.tar.gz::https://github.com/ggml-org/whisper.cpp/archive/$_whisper_commit.tar.gz"
+  "llama.cpp-$_llama_commit.tar.gz::https://github.com/ggml-org/llama.cpp/archive/$_llama_commit.tar.gz"
+  'hypxrvoiced-session'
+  'hypxrvoiced.service'
+)
+sha256sums=(
+  '237089d8d3c7c4f451f5c8891066c14fe2d2e28ec8ec52b11528b3c8e2d8d09e'
+  'cb27b23a357642bcd7189ad24d9c8b770ba49f7a49216b899798d52c02f8beaf'
+  'd4a00aaa88ff92938281ce6521b632ca021284f3f8386993deba6f02d19b5f12'
+  'b501f789ebca1c50e2f1294372f94ac9cc66da3393773f6a7452cbdb898a143a'
+  '26c51fb27538464ea4fdde70cb638691e2587ef4aa262b67013532b5d2c7a478'
+)
+
+prepare() {
+  cd "$pkgname-$_commit"
+
+  rmdir subprojects/whisper.cpp subprojects/llama.cpp
+  ln -s "$srcdir/whisper.cpp-$_whisper_commit" subprojects/whisper.cpp
+  ln -s "$srcdir/llama.cpp-$_llama_commit" subprojects/llama.cpp
+  cp subprojects/whisper.cpp/LICENSE LICENSE.whisper.cpp
+  cp subprojects/llama.cpp/LICENSE LICENSE.llama.cpp
+}
+
+build() {
+  cmake -S "$pkgname-$_commit" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DHYPXRVOICE_LLAMA=ON \
+    -DHYPXRHUD_BIN=/usr/bin/hypxrhud
+  cmake --build build
+}
+
+check() {
+  bash -n hypxrvoiced-session
+  sed '0,/^model = ""/s|^model = "".*|model = "/usr/share/hypxrvoice/models/ggml-base.en.bin"|' \
+    "$pkgname-$_commit/examples/config.toml" > packaged-config.toml
+  grep -A8 '^\[asr\]' packaged-config.toml | \
+    grep -F 'model = "/usr/share/hypxrvoice/models/ggml-base.en.bin"'
+  grep -A8 '^\[intent\]' packaged-config.toml | grep -F 'model = ""'
+  ctest --test-dir build --output-on-failure -E hypxrvoice_hud_dbus_tests
+  ! ldd build/hypxrvoiced | grep -E 'lib(ggml|llama|whisper).*not found'
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+
+  install -Dm755 hypxrvoiced-session "$pkgdir/usr/bin/hypxrvoiced-session"
+  install -Dm644 hypxrvoiced.service \
+    "$pkgdir/usr/lib/systemd/user/hypxrvoiced.service"
+  install -dm755 "$pkgdir/usr/share/hypxrvoice"
+  sed '0,/^model = ""/s|^model = "".*|model = "/usr/share/hypxrvoice/models/ggml-base.en.bin"|' \
+    "$pkgname-$_commit/examples/config.toml" > \
+    "$pkgdir/usr/share/hypxrvoice/config.toml"
+
+  install -Dm644 "$pkgname-$_commit/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$pkgname-$_commit/LICENSE.whisper.cpp" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.whisper.cpp"
+  install -Dm644 "$pkgname-$_commit/LICENSE.llama.cpp" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.llama.cpp"
+  install -Dm644 "$pkgname-$_commit/README.md" \
+    "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 "$pkgname-$_commit/examples/config.toml" \
+    "$pkgdir/usr/share/doc/$pkgname/config.toml"
+}

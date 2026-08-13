@@ -6,7 +6,7 @@ source "$BUILD_ROOT/helpers/message-helpers.sh"
 source "$BUILD_ROOT/helpers/paths.sh"
 
 # Default remote (production)
-DEFAULT_REMOTE="pkgs.omarchy.org:omarchy-pkgs"
+DEFAULT_REMOTE="hypxr:packages"
 REMOTE="$DEFAULT_REMOTE"
 SKIP_PROD_CHECK=false
 PRUNE=false
@@ -85,6 +85,23 @@ if [[ ! -d "$REPO_DIR" ]]; then
   exit 1
 fi
 
+for signed_database in hypxr.db.tar.zst hypxr.files.tar.zst; do
+  if [[ ! -f "$REPO_DIR/$signed_database" || ! -f "$REPO_DIR/$signed_database.sig" ]]; then
+    print_error "Signed repository database is missing: $signed_database"
+    echo ""
+    echo "Run: bin/repo sign-db --mirror $MIRROR --arch $ARCH"
+    exit 1
+  fi
+done
+
+if [[ ! -e $REPO_DIR/hypxr.db.sig || ! -e $REPO_DIR/hypxr.files.sig ]]; then
+  print_error "Repository database signature aliases are missing"
+  echo "Run: bin/repo sign-db --mirror $MIRROR --arch $ARCH"
+  exit 1
+fi
+
+"$BUILD_ROOT/bin/verify-database" --mirror "$MIRROR" --arch "$ARCH"
+
 DESTINATION_DIRECTORY="$MIRROR/$ARCH"
 
 # Check if syncing to production and warn user
@@ -135,12 +152,12 @@ elif [[ $RCLONE_STATUS -ne 0 ]]; then
   exit 1
 fi
 
-if grep -qx 'omarchy\.db' <<<"$REMOTE_LISTING"; then
+if grep -qx 'hypxr\.db' <<<"$REMOTE_LISTING"; then
   # bsdtar, not tar: the database is compressed and GNU tar will not detect that
   # on a pipe. repo-add has used both gzip and zstd, so let libarchive decide.
   REMOTE_DB_FILE=$(mktemp)
   trap 'rm -f "$REMOTE_DB_FILE"' EXIT
-  rclone cat "$REMOTE/$DESTINATION_DIRECTORY/omarchy.db" --s3-no-head >"$REMOTE_DB_FILE" 2>/dev/null
+  rclone cat "$REMOTE/$DESTINATION_DIRECTORY/hypxr.db" --s3-no-head >"$REMOTE_DB_FILE" 2>/dev/null
 
   if ! command -v bsdtar >/dev/null 2>&1; then
     print_error "bsdtar is not installed"
@@ -159,8 +176,8 @@ if grep -qx 'omarchy\.db' <<<"$REMOTE_LISTING"; then
     print_error "The remote database exists but could not be read"
     echo ""
     echo "Refusing to sync rather than assume the remote is empty. Check that"
-    echo "omarchy.db is not corrupt:"
-    echo "  rclone cat $REMOTE/$DESTINATION_DIRECTORY/omarchy.db | bsdtar -tf -"
+    echo "hypxr.db is not corrupt:"
+    echo "  rclone cat $REMOTE/$DESTINATION_DIRECTORY/hypxr.db | bsdtar -tf -"
     exit 1
   fi
 
@@ -191,50 +208,50 @@ fi
 #
 # This is `copy`, not `sync`: a local tree is not authoritative about what should
 # exist on the remote. Packages built on another machine live only in that
-# machine's build-output, and pkgs.omarchy.org/ is gitignored, so any checkout
+# machine's build-output, and repository/ is gitignored, so any checkout
 # that has not run a full release is missing nearly everything. `sync` would read
 # those absences as deletions and empty the repository. --ignore-existing keeps
 # versions already published from being overwritten.
-if [[ "$PRUNE" == true ]]; then
-  print_warning "Pruning: remote packages missing from $REPO_DIR will be DELETED"
-  if [[ "$SKIP_PROD_CHECK" != true ]]; then
-    read -p "Prune the remote to match this tree? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      print_info "Sync cancelled"
-      exit 0
-    fi
-  fi
-  print_info "Syncing packages (with prune)..."
-  if ! rclone sync "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
-    --s3-no-head \
-    --exclude "omarchy.db*" \
-    --exclude "omarchy.files*" \
-    --ignore-existing \
-    --copy-links --delete-after -v; then
-    print_error "Package sync failed — not publishing the database"
-    exit 1
-  fi
-else
-  print_info "Syncing packages..."
-  if ! rclone copy "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
-    --s3-no-head \
-    --exclude "omarchy.db*" \
-    --exclude "omarchy.files*" \
-    --ignore-existing \
-    --copy-links -v; then
-    print_error "Package upload failed — not publishing the database"
-    print_warning "The remote database still describes the previous contents, so"
-    print_warning "the repository is unchanged and consistent."
-    exit 1
-  fi
+if [[ $PRUNE == true ]]; then
+  print_error "--prune is disabled until deletion can occur after database publication"
+  echo "Use additive sync, or remove retired artifacts manually only after the"
+  echo "signed database that stops advertising them is live."
+  exit 1
 fi
 
-# Then sync database files last to ensure repository integrity
+print_info "Syncing packages..."
+if ! rclone copy "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
+  --s3-no-head \
+  --exclude "hypxr.db*" \
+  --exclude "hypxr.files*" \
+  --ignore-existing \
+  --copy-links -v; then
+  print_error "Package upload failed — not publishing the database"
+  print_warning "The remote database still describes the previous contents, so"
+  print_warning "the repository is unchanged and consistent."
+  exit 1
+fi
+
+# Publish the detached database signatures before the databases. A client that
+# catches the transition fails closed until the matching database arrives.
+print_info "Publishing repository database signatures..."
+if ! rclone copy "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
+  --s3-no-head \
+  --include "hypxr.db*.sig" \
+  --include "hypxr.files*.sig" \
+  --checksum --copy-links -v; then
+  print_error "Database signature upload failed"
+  exit 1
+fi
+
+# Publish database files last so they never advertise an absent package.
 print_info "Updating repository database..."
 if ! rclone copy "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
   --s3-no-head \
-  --include "omarchy.*" \
+  --include "hypxr.db" \
+  --include "hypxr.db.tar.zst" \
+  --include "hypxr.files" \
+  --include "hypxr.files.tar.zst" \
   --checksum --copy-links -v; then
   print_error "Database upload failed"
   print_warning "Packages were uploaded but the database still describes the"

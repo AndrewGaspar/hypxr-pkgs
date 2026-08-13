@@ -9,7 +9,7 @@ MIRROR=${MIRROR:-edge}
 DRY_RUN=${DRY_RUN:-false}
 PKGBUILDS_DIR=${PKGBUILDS_DIR:-/pkgbuilds}
 BUILD_OUTPUT_DIR=${BUILD_OUTPUT_DIR:-/build-output/$MIRROR/$ARCH}
-FINAL_OUTPUT_DIR=${FINAL_OUTPUT_DIR:-/pkgs.omarchy.org/$MIRROR/$ARCH}
+FINAL_OUTPUT_DIR=${FINAL_OUTPUT_DIR:-/repository/$MIRROR/$ARCH}
 HELPERS_DIR=${HELPERS_DIR:-/helpers}
 SRC_DIR=${SRC_DIR:-/src}
 
@@ -29,44 +29,56 @@ if [[ "$DRY_RUN" != true ]]; then
   echo "==> Updating build container packages..."
   sudo pacman -Syu --noconfirm
 
-  # Configure Omarchy repositories for dependency resolution
-  echo "==> Configuring Omarchy repositories for dependency resolution..."
+  # Resolve the current build wave first, then previously published HypXR
+  # packages, then the matching public Omarchy release ring.
+  echo "==> Configuring HypXR and Omarchy repositories..."
 
-  # Always add omarchy-build repo (for incremental builds)
+  # Always add hypxr-build repo (for incremental builds).
   # Packages in build-output are unsigned, so use SigLevel = Never
   sudo tee -a /etc/pacman.conf > /dev/null <<EOF
 
-[omarchy-build]
+[hypxr-build]
 SigLevel = Never
 Server = file://$BUILD_OUTPUT_DIR
 EOF
-  echo "  -> omarchy-build (priority 1): $BUILD_OUTPUT_DIR"
+  echo "  -> hypxr-build (priority 1): $BUILD_OUTPUT_DIR"
 
   # Initialize empty build database if it doesn't exist
   cd "$BUILD_OUTPUT_DIR"
-  if [[ ! -f "omarchy-build.db.tar.zst" ]]; then
+  if [[ ! -f "hypxr-build.db.tar.zst" ]]; then
     # Create an empty database
-    repo-add omarchy-build.db.tar.zst >/dev/null 2>&1
-    ln -sf omarchy-build.db.tar.zst omarchy-build.db
+    repo-add hypxr-build.db.tar.zst >/dev/null 2>&1
+    ln -sf hypxr-build.db.tar.zst hypxr-build.db
   else
     # Database exists, check if we need to rebuild it from packages
-    if ls *.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'omarchy-build\.db' | grep -q .; then
+    if ls *.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'hypxr-build\.db' | grep -q .; then
       echo "==> Rebuilding build database from existing packages..."
-      ls *.pkg.tar.* | grep -v '\.sig$' | grep -v 'omarchy-build\.db' | xargs -r repo-add omarchy-build.db.tar.zst >/dev/null 2>&1
-      ln -sf omarchy-build.db.tar.zst omarchy-build.db
+      ls *.pkg.tar.* | grep -v '\.sig$' | grep -v 'hypxr-build\.db' | xargs -r repo-add hypxr-build.db.tar.zst >/dev/null 2>&1
+      ln -sf hypxr-build.db.tar.zst hypxr-build.db
     fi
   fi
 
-  # Add omarchy repo if it has a database (stable packages)
-  if [[ -f "$FINAL_OUTPUT_DIR/omarchy.db.tar.zst" ]] || [[ -f "$FINAL_OUTPUT_DIR/omarchy.db" ]]; then
+  # Add the already-published HypXR ring when it has a database.
+  if [[ -f "$FINAL_OUTPUT_DIR/hypxr.db.tar.zst" || -f "$FINAL_OUTPUT_DIR/hypxr.db" ]]; then
     sudo tee -a /etc/pacman.conf > /dev/null <<EOF
 
-[omarchy]
-SigLevel = Optional TrustAll
+[hypxr]
+SigLevel = Never
 Server = file://$FINAL_OUTPUT_DIR
 EOF
-    echo "  -> omarchy (priority 2): $FINAL_OUTPUT_DIR"
+    echo "  -> hypxr (priority 2): $FINAL_OUTPUT_DIR"
   fi
+
+  # HypXR is additive to Omarchy. Use the matching Omarchy ring for build-time
+  # dependencies such as omarchy-settings; never copy those packages into this
+  # repository.
+  sudo tee -a /etc/pacman.conf > /dev/null <<EOF
+
+[omarchy]
+SigLevel = Required DatabaseOptional
+Server = https://pkgs.omarchy.org/$MIRROR/\$arch
+EOF
+  echo "  -> omarchy (priority 3): https://pkgs.omarchy.org/$MIRROR/\$arch"
 
   # Sync pacman database
   sudo pacman -Sy
@@ -105,10 +117,10 @@ LOCAL_VERSION_CACHE_LOADED=false
 LOCAL_VERSION_CACHE_DB=""
 
 load_local_versions() {
-  local db="$FINAL_OUTPUT_DIR/omarchy.db.tar.zst"
+  local db="$FINAL_OUTPUT_DIR/hypxr.db.tar.zst"
 
   if [[ ! -f "$db" ]]; then
-    db="$FINAL_OUTPUT_DIR/omarchy.db"
+    db="$FINAL_OUTPUT_DIR/hypxr.db"
   fi
 
   [[ -f "$db" ]] || return 0
@@ -293,11 +305,11 @@ build_package() {
     cd "$BUILD_OUTPUT_DIR"
 
     # Find ALL package files (handles split packages)
-    local new_pkgs=($(ls -t ${pkg}-*.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'omarchy-build\.db'))
+    local new_pkgs=($(ls -t ${pkg}-*.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'hypxr-build\.db'))
 
     if [[ ${#new_pkgs[@]} -gt 0 ]]; then
-      repo-add omarchy-build.db.tar.zst "${new_pkgs[@]}" >/dev/null 2>&1
-      ln -sf omarchy-build.db.tar.zst omarchy-build.db
+      repo-add hypxr-build.db.tar.zst "${new_pkgs[@]}" >/dev/null 2>&1
+      ln -sf hypxr-build.db.tar.zst hypxr-build.db
       sudo pacman -Sy >/dev/null 2>&1
     fi
 

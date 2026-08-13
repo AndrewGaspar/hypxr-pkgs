@@ -1,0 +1,88 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=hypxrland-legacy-config
+pkgver=3.8.4
+pkgrel=1
+pkgdesc='Classic Omarchy Hyprland defaults adapted for HypXRland on Quattro'
+arch=('any')
+url='https://github.com/basecamp/omarchy'
+license=('MIT')
+depends=('omarchy-settings=4.0.0rc2')
+
+_commit=8fcc9d6048af4cb0e3af8512c78049857a3b53dd
+source=(
+  "omarchy-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
+  'autostart-quattro.conf'
+)
+sha256sums=(
+  '40a8e8691b962f52fd2fc1f52ad27f307c26bb05f51031ddf4c327c6e3e02c44'
+  '03515625af73809b617e4cd025abb0ecd7f0a63c10c265763b4d8c42ea3ed769'
+)
+
+prepare() {
+  cd "omarchy-$_commit"
+
+  install -Dm644 "$srcdir/autostart-quattro.conf" default/hypr/autostart.conf
+
+  # Quattro replaced several Omarchy 3 commands with shell-backed routes.
+  # Keep the classic hyprlang surface while targeting the current commands.
+  find default/hypr -type f -name '*.conf' -exec sed -i \
+    -e 's|~/.local/share/omarchy|/usr/share/omarchy|g' \
+    -e 's|omarchy-capture-text-extraction|omarchy-capture-text|g' \
+    -e 's|omarchy-toggle-waybar|omarchy-toggle-bar|g' \
+    -e 's|omarchy-launch-audio|omarchy-shell shell toggle omarchy.audio|g' \
+    -e 's|omarchy-launch-bluetooth|omarchy-shell shell toggle omarchy.bluetooth|g' \
+    -e 's|omarchy-launch-wifi|omarchy-shell shell toggle omarchy.network|g' \
+    -e 's|omarchy-swayosd-client --output-volume|omarchy-audio-output-volume|g' \
+    -e 's|omarchy-swayosd-client --playerctl next|omarchy-shell media next|g' \
+    -e 's|omarchy-swayosd-client --playerctl play-pause|omarchy-shell media playPause|g' \
+    -e 's|omarchy-swayosd-client --playerctl previous|omarchy-shell media previous|g' \
+    -e 's|makoctl dismiss --all|omarchy-shell notifications dismissAll|g' \
+    -e 's|makoctl dismiss|omarchy-shell notifications dismissOne|g' \
+    -e 's|makoctl invoke|omarchy-shell notifications invokeLast|g' \
+    -e 's|makoctl restore|omarchy-shell notifications showHistory|g' \
+    -e 's|omarchy-launch-walker -m symbols|omarchy-shell shell toggle omarchy.emojis|g' \
+    -e 's|omarchy-launch-walker|omarchy-menu toggle apps|g' \
+    {} +
+
+  # Quattro themes are Lua/TOML driven and no longer generate this legacy
+  # gum env file. It contributed no compositor settings, so drop the source.
+  sed -i '/current\/theme\/gum\.env\.conf/d' default/hypr/envs.conf
+}
+
+check() {
+  cd "omarchy-$_commit"
+
+  local config_count required
+  for required in \
+    default/hypr/envs.conf \
+    default/hypr/looknfeel.conf \
+    default/hypr/autostart.conf \
+    default/hypr/input.conf \
+    default/hypr/windows.conf \
+    default/hypr/bindings/media.conf \
+    default/hypr/bindings/clipboard.conf \
+    default/hypr/bindings/tiling-v2.conf; do
+    [[ -f $required ]]
+  done
+
+  config_count=$(find default/hypr -type f -name '*.conf' | wc -l)
+  (( config_count == 35 ))
+  ! find default/hypr -type f ! -name '*.conf' -print -quit | grep -q .
+  grep -Fq 'exec-once = omarchy-launch-shell' default/hypr/autostart.conf
+  grep -Fq 'exec-once = omarchy-provision-first-run' default/hypr/autostart.conf
+  ! grep -R '\.local/share/omarchy' default/hypr
+  ! grep -R 'current/theme/gum.env.conf' default/hypr
+  ! grep -RE 'hypridle|mako|waybar|swaybg|omarchy-first-run|omarchy-launch-walker|omarchy-swayosd-client' \
+    default/hypr
+}
+
+package() {
+  cd "omarchy-$_commit"
+
+  while IFS= read -r -d '' source_file; do
+    install -Dm644 "$source_file" "$pkgdir/usr/share/omarchy/$source_file"
+  done < <(find default/hypr -type f -name '*.conf' -print0)
+
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

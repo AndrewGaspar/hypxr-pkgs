@@ -23,6 +23,11 @@ if [[ -z "$GPG_PASSPHRASE" ]]; then
   exit 1
 fi
 
+if [[ -z ${HYPXR_SIGNING_FINGERPRINT:-} ]]; then
+  echo "ERROR: HYPXR_SIGNING_FINGERPRINT environment variable not set"
+  exit 1
+fi
+
 # Import GPG key
 echo "==> Importing GPG signing key..."
 echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>/dev/null || {
@@ -31,14 +36,16 @@ echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>/dev/null || {
 }
 
 # Get key ID
-KEY_ID=$(gpg --list-secret-keys --keyid-format LONG 2>/dev/null | grep "sec" | head -1 | awk '{print $2}' | cut -d'/' -f2)
+KEY_FINGERPRINT=$(gpg --batch --with-colons --with-subkey-fingerprint \
+  --list-secret-keys "$HYPXR_SIGNING_FINGERPRINT" 2>/dev/null |
+  awk -F: -v expected="$HYPXR_SIGNING_FINGERPRINT" '$1 == "fpr" && $10 == expected { print $10; exit }')
 
-if [[ -z "$KEY_ID" ]]; then
-  echo "ERROR: Could not extract key ID"
+if [[ $KEY_FINGERPRINT != "$HYPXR_SIGNING_FINGERPRINT" ]]; then
+  echo "ERROR: Imported key does not match HYPXR_SIGNING_FINGERPRINT"
   exit 1
 fi
 
-echo "  ✓ GPG signing key loaded: $KEY_ID"
+echo "  ✓ GPG signing key loaded: $KEY_FINGERPRINT"
 
 # Check if build output exists and has packages
 if [[ ! -d "$BUILD_OUTPUT_DIR" ]]; then
@@ -72,7 +79,7 @@ for pkg_file in $PACKAGE_FILES; do
   
   # Sign the package
   if gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
-    --detach-sign --use-agent --no-armor --local-user "$KEY_ID" "$pkg_file" 2>/dev/null; then
+    --detach-sign --use-agent --no-armor --local-user "$KEY_FINGERPRINT!" "$pkg_file" 2>/dev/null; then
     echo "✓"
     SIGNED_COUNT=$((SIGNED_COUNT + 1))
   else

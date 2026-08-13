@@ -1,0 +1,55 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=hypxrpaper
+pkgver=0.20260704.1.g5cae848cd
+pkgrel=1
+pkgdesc='Ambient panorama and scene client for OpenXR'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/hypxrpaper'
+license=('BSD-3-Clause' 'MIT' 'CC0-1.0')
+depends=(
+  'gcc-libs'
+  'glibc'
+  'libdrm'
+  'libglvnd'
+  'mesa'
+  'openxr'
+)
+makedepends=(
+  'cmake'
+  'gcc'
+  'ninja'
+  'pkgconf'
+)
+options=('!debug')
+
+_commit=5cae848cd4540df24d1901447cdd0060491069e6
+source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('782e6908c63ea825ec8bd4655feecb05f5255302d3daf8d5be05c3d67cc1fe6c')
+
+build() {
+  cmake -S "$pkgname-$_commit" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib
+  cmake --build build
+}
+
+check() {
+  build/hypxrpaper --help 2>&1 | grep -F -- '--scene'
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+
+  install -dm755 "$pkgdir/usr/share/hypxrpaper/scenes"
+  cp -a "$pkgname-$_commit/assets/forest-clearing" \
+    "$pkgdir/usr/share/hypxrpaper/scenes/"
+
+  install -Dm644 "$pkgname-$_commit/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$pkgname-$_commit/assets/forest-clearing/ATTRIBUTION.md" \
+    "$pkgdir/usr/share/licenses/$pkgname/ATTRIBUTION.md"
+  install -Dm644 "$pkgname-$_commit/README.md" \
+    "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

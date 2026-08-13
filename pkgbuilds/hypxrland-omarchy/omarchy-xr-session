@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -euo pipefail
+
+config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland-xr.conf"
+
+if [[ ! -r $config ]]; then
+  /usr/bin/omarchy-setup-hypxrland
+fi
+
+exec /usr/bin/hypxrland-session "$@"

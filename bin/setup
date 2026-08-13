@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prepare this machine to serve as the Omarchy repository host.
+# Prepare this machine to serve as the HypXR repository host.
 #
 # The host receives uploads, promotes packages into the published tree, and
 # syncs that tree to the mirror. Everything Arch-specific — makepkg, repo-add,
@@ -7,7 +7,7 @@
 # little and does not need to be Arch. The production host is Ubuntu.
 #
 # Run this on the host itself:
-#   ssh root@<host> 'cd /root/omarchy-pkgs && bin/setup'
+#   ssh root@<host> 'cd /root/hypxr-pkgs && bin/setup'
 #
 # It is idempotent — run it again after adding a dependency.
 
@@ -19,10 +19,10 @@ source "$BUILD_ROOT/helpers/message-helpers.sh"
 CHECK_ONLY=false
 SKIP_TIMERS=false
 
-STATE_DIR="${OMARCHY_STATE_DIR:-/root/.state}"
-CREDENTIALS="/root/.omarchy/build-credentials"
+STATE_DIR="${HYPXR_STATE_DIR:-/root/.hypxr/state}"
+CREDENTIALS="/root/.hypxr/build-credentials"
 
-print_header "Omarchy Repository Host Setup"
+print_header "HypXR Repository Host Setup"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -194,7 +194,7 @@ echo ""
 
 # --- release timers ----------------------------------------------------------
 
-TIMERS=(omarchy-check-versions omarchy-auto-release-edge omarchy-auto-release-stable)
+TIMERS=(hypxr-check-versions hypxr-auto-release-edge)
 
 if [[ "$SKIP_TIMERS" == true ]]; then
   print_info "Skipping release timers (--skip-timers)"
@@ -227,14 +227,15 @@ if [[ -f "$CREDENTIALS" ]]; then
   print_success "Signing credentials present: $CREDENTIALS"
 else
   print_warning "Missing $CREDENTIALS"
-  echo "    Must export GPG_PRIVATE_KEY and GPG_PASSPHRASE; the release"
+  echo "    Must export GPG_PRIVATE_KEY, GPG_PASSPHRASE, and"
+  echo "    HYPXR_SIGNING_FINGERPRINT; the release"
   echo "    services source it before signing."
 fi
 
-if rclone listremotes 2>/dev/null | grep -q '^pkgs.omarchy.org:'; then
-  print_success "rclone remote 'pkgs.omarchy.org' configured"
+if rclone listremotes 2>/dev/null | grep -q '^hypxr:'; then
+  print_success "rclone remote 'hypxr' configured"
 else
-  print_warning "rclone remote 'pkgs.omarchy.org' not configured"
+  print_warning "rclone remote 'hypxr' not configured"
   echo "    bin/repo sync publishes there; configure it with 'rclone config'."
 fi
 echo ""

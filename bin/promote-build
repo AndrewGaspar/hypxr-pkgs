@@ -1,5 +1,5 @@
 #!/bin/bash
-# Promote packages from build-output to pkgs.omarchy.org
+# Promote packages from build-output to the local HypXR repository tree.
 
 set -e
 
@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
     echo "  --dry-run          Show what would be copied without copying"
     echo "  -h, --help         Show this help message"
     echo ""
-    echo "This script promotes packages from build-output/ to pkgs.omarchy.org/"
+    echo "This script promotes packages from build-output/ to repository/"
     exit 0
     ;;
   *)
@@ -59,7 +59,7 @@ fi
 
 # Count packages in build output
 cd "$BUILD_OUTPUT_DIR"
-PACKAGE_COUNT=$(ls -1 *.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'omarchy-build\.db' | wc -l)
+PACKAGE_COUNT=$(ls -1 *.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'hypxr-build\.db' | wc -l)
 
 if [[ $PACKAGE_COUNT -eq 0 ]]; then
   print_warning "No packages found in build output"
@@ -72,7 +72,7 @@ if [[ "$DRY_RUN" == true ]]; then
   print_warning "DRY RUN MODE - No files will be copied"
   echo ""
   print_info "Packages that would be promoted:"
-  ls -1 *.pkg.tar.* 2>/dev/null | grep -v 'omarchy-build\.db' | grep -v 'omarchy-build\.files' | while read -r pkg; do
+  ls -1 *.pkg.tar.* 2>/dev/null | grep -v 'hypxr-build\.db' | grep -v 'hypxr-build\.files' | while read -r pkg; do
     echo "  - $pkg"
   done
 else
@@ -83,8 +83,8 @@ else
   MISSING_SIGS=()
   for pkg_file in *.pkg.tar.*; do
     # Skip build database files
-    [[ "$pkg_file" == omarchy-build.db* ]] && continue
-    [[ "$pkg_file" == omarchy-build.files* ]] && continue
+    [[ $pkg_file == hypxr-build.db* ]] && continue
+    [[ $pkg_file == hypxr-build.files* ]] && continue
     # Skip signature files themselves
     [[ "$pkg_file" == *.sig ]] && continue
     [[ ! -f "$pkg_file" ]] && continue
@@ -120,8 +120,8 @@ else
   declare -A ALREADY_PROMOTED=()
   for pkg_file in *.pkg.tar.*; do
     # Skip build database files
-    [[ "$pkg_file" == omarchy-build.db* ]] && continue
-    [[ "$pkg_file" == omarchy-build.files* ]] && continue
+    [[ $pkg_file == hypxr-build.db* ]] && continue
+    [[ $pkg_file == hypxr-build.files* ]] && continue
     [[ "$pkg_file" == *.sig ]] && continue
     [[ ! -f "$pkg_file" ]] && continue
 
@@ -154,7 +154,7 @@ else
       echo "  - $conflict"
     done
     echo ""
-    print_error "Refusing to replace published packages in pkgs.omarchy.org!"
+    print_error "Refusing to replace published HypXR packages!"
     exit 1
   fi
 
@@ -170,8 +170,8 @@ else
   MOVED=0
   for pkg_file in *.pkg.tar.*; do
     # Skip build database files
-    [[ "$pkg_file" == omarchy-build.db* ]] && continue
-    [[ "$pkg_file" == omarchy-build.files* ]] && continue
+    [[ $pkg_file == hypxr-build.db* ]] && continue
+    [[ $pkg_file == hypxr-build.files* ]] && continue
     [[ ! -f "$pkg_file" ]] && continue
     [[ -n "${ALREADY_PROMOTED[$pkg_file]:-}" ]] && continue
 
@@ -185,10 +185,10 @@ else
   done
 
   echo ""
-  print_success "Promoted $MOVED file(s) to pkgs.omarchy.org"
+  print_success "Promoted $MOVED file(s) to the HypXR repository"
 
   print_info "Cleaning up build directory..."
   cd "$BUILD_OUTPUT_DIR"
-  rm -f *.pkg.tar.* omarchy-build.db* omarchy-build.files*
+  rm -f *.pkg.tar.* hypxr-build.db* hypxr-build.files*
   print_success "Build directory cleaned"
 fi

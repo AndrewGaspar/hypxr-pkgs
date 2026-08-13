@@ -1,4 +1,4 @@
-# Common path variables for Omarchy package build system
+# Common path variables for the HypXR package build system.
 # This file should be sourced after setting BUILD_ROOT
 
 # Default architecture and mirror
@@ -15,7 +15,7 @@ PKGBUILDS_DIR="$BUILD_ROOT/pkgbuilds"
 # Call this after changing ARCH or MIRROR variables
 update_arch_paths() {
   BUILD_OUTPUT_DIR="$BUILD_ROOT/build-output/$MIRROR/$ARCH"        # Unsigned packages
-  REPO_DIR="$BUILD_ROOT/pkgs.omarchy.org/$MIRROR/$ARCH"            # Repository (signed packages)
+  REPO_DIR="$BUILD_ROOT/repository/$MIRROR/$ARCH"                 # Repository (signed packages)
 }
 
 # Initialize architecture-specific directories with default ARCH and MIRROR
