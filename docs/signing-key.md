@@ -2,8 +2,8 @@
 
 The repository trust root is an offline, certification-only OpenPGP primary
 key. Package and database releases use a separate, expiring signing subkey.
-The publication host must never receive an export containing the usable
-primary secret key.
+The protected production environment must never receive an export containing
+the usable primary secret key.
 
 ## Custody model
 
@@ -13,7 +13,8 @@ primary secret key.
 - Keep a recovery signing subkey offline but include its public half in the
   published keyring. It can sign a keyring update if the active publisher key
   is lost or compromised.
-- Put only the active operational signing subkey on the publication host.
+- Put only the active operational signing subkey in the protected production
+  GitHub environment.
 - Give operational signing subkeys a one-year expiry and rotate with 60–90
   days of overlap.
 - Test both offline backups after creation and annually.
@@ -70,7 +71,7 @@ subkey. Verify it on a disposable machine before placing it on the publisher:
 its primary secret key should be a `sec#` stub, the operational signing subkey
 should be usable, and the recovery subkey should have no secret material.
 
-The publisher environment uses:
+The production environment uses:
 
 ```bash
 export GPG_PRIVATE_KEY='armored operational subkey export only'

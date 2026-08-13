@@ -100,6 +100,7 @@ if [[ ! -e $REPO_DIR/hypxr.db.sig || ! -e $REPO_DIR/hypxr.files.sig ]]; then
   exit 1
 fi
 
+"$BUILD_ROOT/bin/verify-packages" --directory "$REPO_DIR"
 "$BUILD_ROOT/bin/verify-database" --mirror "$MIRROR" --arch "$ARCH"
 
 DESTINATION_DIRECTORY="$MIRROR/$ARCH"
@@ -229,6 +230,18 @@ if ! rclone copy "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
   print_error "Package upload failed — not publishing the database"
   print_warning "The remote database still describes the previous contents, so"
   print_warning "the repository is unchanged and consistent."
+  exit 1
+fi
+
+# --ignore-existing prevents replacement but cannot prove an existing object
+# has the same bytes as the package used to build the pending database. Compare
+# every local immutable object by downloading it before publishing metadata.
+if ! rclone check "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
+  --exclude "hypxr.db*" \
+  --exclude "hypxr.files*" \
+  --download --one-way --copy-links; then
+  print_error "Remote package verification failed — not publishing the database"
+  print_warning "A versioned filename is absent or has different content."
   exit 1
 fi
 

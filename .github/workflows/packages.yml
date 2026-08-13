@@ -1,0 +1,220 @@
+name: Build packages
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Sign and publish this build to the edge repository
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  ARCH: x86_64
+  MIRROR: edge
+  RELEASE_ARTIFACT: hypxr-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Install manifest dependencies
+        run: sudo apt-get update && sudo apt-get install --yes jq libarchive-tools ripgrep
+
+      - name: Configure upstream remote
+        run: git remote add upstream https://github.com/omacom-io/omarchy-pkgs.git
+
+      - name: Run repository tests
+        run: test/run.sh
+
+      - name: Build complete edge package wave
+        run: |
+          source helpers/package-metadata.sh
+          mapfile -t packages < <(packages_for_mirror "$MIRROR")
+          bin/repo build --mirror "$MIRROR" --arch "$ARCH" --package "${packages[@]}"
+
+      - name: Create release manifest
+        run: |
+          mkdir -p release/packages
+          cp "build-output/$MIRROR/$ARCH/"*.pkg.tar.zst release/packages/
+          bin/create-release-manifest \
+            --directory release/packages \
+            --output release/release-manifest.json \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-commit "$GITHUB_SHA" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --mirror "$MIRROR" \
+            --arch "$ARCH"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ env.RELEASE_ARTIFACT }}
+          path: release/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
+
+  disposable-signing-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ env.RELEASE_ARTIFACT }}
+          path: release
+
+      - name: Sign and verify with a disposable key
+        run: |
+          set -euo pipefail
+          mkdir -p "build-output/$MIRROR/$ARCH"
+          cp release/packages/*.pkg.tar.zst "build-output/$MIRROR/$ARCH/"
+
+          export GNUPGHOME
+          GNUPGHOME=$(mktemp -d)
+          chmod 0700 "$GNUPGHOME"
+          export GPG_PASSPHRASE=disposable-ci-passphrase
+
+          gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
+            --quick-generate-key 'HypXR Disposable CI Key <ci@hypxr.invalid>' rsa2048 cert 1d
+          export HYPXR_PRIMARY_FINGERPRINT
+          HYPXR_PRIMARY_FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys |
+            awk -F: '$1 == "fpr" { print $10; exit }')
+          gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
+            --quick-add-key "$HYPXR_PRIMARY_FINGERPRINT" rsa2048 sign 1d
+          export HYPXR_SIGNING_SUBKEY_FINGERPRINT
+          HYPXR_SIGNING_SUBKEY_FINGERPRINT=$(gpg --batch --with-colons \
+            --with-subkey-fingerprint --list-secret-keys "$HYPXR_PRIMARY_FINGERPRINT" |
+            awk -F: '$1 == "ssb" { subkey = 1; next } subkey && $1 == "fpr" { print $10; exit }')
+          export GPG_PRIVATE_KEY
+          GPG_PRIVATE_KEY=$(gpg --batch --pinentry-mode loopback \
+            --passphrase "$GPG_PASSPHRASE" --armor \
+            --export-secret-subkeys "$HYPXR_SIGNING_SUBKEY_FINGERPRINT!")
+          export HYPXR_PUBLIC_KEY
+          HYPXR_PUBLIC_KEY=$(gpg --batch --armor --export "$HYPXR_PRIMARY_FINGERPRINT")
+
+          bin/repo sign --mirror "$MIRROR" --arch "$ARCH"
+          bin/verify-packages --directory "build-output/$MIRROR/$ARCH"
+          bin/repo promote --mirror "$MIRROR" --arch "$ARCH"
+          bin/repo update --mirror "$MIRROR" --arch "$ARCH"
+          bin/repo sign-db --mirror "$MIRROR" --arch "$ARCH"
+          bin/repo verify-db --mirror "$MIRROR" --arch "$ARCH"
+          bin/verify-packages --directory "repository/$MIRROR/$ARCH"
+
+          tampered=$(mktemp -d)
+          package=$(find "repository/$MIRROR/$ARCH" -maxdepth 1 -name '*.pkg.tar.zst' -print -quit)
+          cp "$package" "$package.sig" "$tampered/"
+          printf 'tampered\n' >>"$tampered/${package##*/}"
+          if bin/verify-packages --directory "$tampered" >/dev/null 2>&1; then
+            echo "Tampered package retained a valid signature" >&2
+            exit 1
+          fi
+
+  stage:
+    if: >-
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish))
+    needs:
+      - build
+      - disposable-signing-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ env.RELEASE_ARTIFACT }}
+          path: release
+
+      - name: Install R2 client
+        run: sudo apt-get update && sudo apt-get install --yes rclone
+
+      - name: Upload immutable staging release
+        env:
+          RCLONE_CONFIG_STAGE_TYPE: s3
+          RCLONE_CONFIG_STAGE_PROVIDER: Cloudflare
+          RCLONE_CONFIG_STAGE_ACCESS_KEY_ID: ${{ secrets.HYPXR_R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_STAGE_SECRET_ACCESS_KEY: ${{ secrets.HYPXR_R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_STAGE_ENDPOINT: https://b56864690db4b781dbf36b94155d808c.r2.cloudflarestorage.com
+          RCLONE_CONFIG_STAGE_REGION: auto
+          RCLONE_CONFIG_STAGE_NO_CHECK_BUCKET: true
+          RCLONE_CONFIG_STAGE_ACL: private
+        run: |
+          set -euo pipefail
+          prefix="incoming/github/$GITHUB_REPOSITORY/$GITHUB_SHA/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/$MIRROR/$ARCH"
+          rclone copy release/packages "stage:packages-staging/$prefix" \
+            --immutable \
+            --header-upload "Cache-Control: private, no-store"
+          rclone check release/packages "stage:packages-staging/$prefix" --download
+          rclone copyto release/release-manifest.json \
+            "stage:packages-staging/$prefix/release-manifest.json" \
+            --immutable \
+            --header-upload "Cache-Control: private, no-store"
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/master'
+    needs: stage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      GPG_PRIVATE_KEY: ${{ secrets.HYPXR_GPG_PRIVATE_KEY }}
+      GPG_PASSPHRASE: ${{ secrets.HYPXR_GPG_PASSPHRASE }}
+      HYPXR_PUBLIC_KEY: ${{ vars.HYPXR_PUBLIC_KEY }}
+      HYPXR_PRIMARY_FINGERPRINT: ${{ vars.HYPXR_PRIMARY_FINGERPRINT }}
+      HYPXR_SIGNING_SUBKEY_FINGERPRINT: ${{ vars.HYPXR_SIGNING_SUBKEY_FINGERPRINT }}
+      RCLONE_CONFIG_HYPXR_TYPE: s3
+      RCLONE_CONFIG_HYPXR_PROVIDER: Cloudflare
+      RCLONE_CONFIG_HYPXR_ACCESS_KEY_ID: ${{ secrets.HYPXR_R2_PRODUCTION_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_HYPXR_SECRET_ACCESS_KEY: ${{ secrets.HYPXR_R2_PRODUCTION_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_HYPXR_ENDPOINT: https://b56864690db4b781dbf36b94155d808c.r2.cloudflarestorage.com
+      RCLONE_CONFIG_HYPXR_REGION: auto
+      RCLONE_CONFIG_HYPXR_NO_CHECK_BUCKET: true
+      RCLONE_CONFIG_HYPXR_ACL: private
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ env.RELEASE_ARTIFACT }}
+          path: release
+
+      - name: Install publication dependencies
+        run: sudo apt-get update && sudo apt-get install --yes rclone
+
+      - name: Sign and publish edge repository
+        run: |
+          set -euo pipefail
+          mkdir -p "build-output/$MIRROR/$ARCH"
+          cp release/packages/*.pkg.tar.zst "build-output/$MIRROR/$ARCH/"
+          bin/repo sign --mirror "$MIRROR" --arch "$ARCH"
+          bin/verify-packages --directory "build-output/$MIRROR/$ARCH"
+          bin/repo promote --mirror "$MIRROR" --arch "$ARCH"
+          bin/repo update --mirror "$MIRROR" --arch "$ARCH"
+          bin/repo sign-db --mirror "$MIRROR" --arch "$ARCH"
+          bin/repo verify-db --mirror "$MIRROR" --arch "$ARCH"
+          bin/verify-packages --directory "repository/$MIRROR/$ARCH"
+          bin/repo sync --mirror "$MIRROR" --arch "$ARCH" \
+            --remote hypxr:packages --skip-prod-check

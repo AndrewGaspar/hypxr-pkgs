@@ -19,26 +19,25 @@ The non-secret resource identifiers are tracked in
 
 - Published bucket: `packages`, WNAM, Standard storage class.
 - Private upload bucket: `packages-staging`, WNAM, Standard storage class.
-- Private frozen-input bucket: `packages-signing`, WNAM, Standard storage
-  class.
+- Reserved private bucket: `packages-signing`, WNAM, Standard storage class.
 - Custom domain: `hypxr.omedora.org`, minimum TLS 1.2.
 - Development `r2.dev` public URL: disabled.
-- Secrets Store: `hypxr`.
+- Unused Secrets Store: `hypxr`, empty.
 - Cache rule: repository databases and signatures bypass cache.
 - Cache rule: versioned package archives and signatures cache for one year;
   4xx and 5xx responses have a zero-second cache TTL.
 
-The temporary external publisher needs a bucket-scoped R2 Object Read & Write
-Account API token restricted to `packages`. Wrangler OAuth does not authenticate
-rclone, and Secrets Store values cannot be read by an external process.
+GitHub Actions uses separate R2 Object Read & Write Account API tokens for the
+private staging bucket and public repository bucket. Wrangler OAuth does not
+authenticate rclone, and Secrets Store values cannot be read by GitHub Actions.
 Repository clients use the public custom hostname and need no token.
 
-Create the token in **Storage & databases → R2 → Overview → Manage API
-Tokens**. Choose **Object Read & Write**, apply it only to `packages`, and put
-the Access Key ID and Secret Access Key into the publisher's root-owned `0600`
-credential file as `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Do not paste
-either value into Git, chat, or a shell argument. Configure rclone without
-secret values:
+Create each token in **Storage & databases → R2 → Overview → Manage API
+Tokens**. Choose **Object Read & Write** and scope it to exactly one bucket.
+The staging pair belongs in the `staging` GitHub environment; the `packages`
+pair belongs only in the reviewer-protected `production` environment. Do not
+paste either value into Git, chat, or a shell argument. The workflow configures
+rclone from masked environment values. A recovery host can use:
 
    ```ini
    [hypxr]
@@ -62,10 +61,12 @@ The explicit Cloudflare bypass is installed for mutable metadata. R2 is
 strongly consistent at the bucket API, but caching overwritten custom-domain
 objects could otherwise expose different database and signature generations.
 
-The target signer uses direct R2 bindings instead of an S3 token. CI receives
-write access only to `packages-staging`; the signer alone can freeze verified
-objects into `packages-signing` and publish to `packages`. See
-[`cloudflare-signer.md`](cloudflare-signer.md).
+Ordinary CI receives write access only to `packages-staging`. The manually
+approved production job receives a separate token for `packages`, verifies and
+signs every artifact, then publishes packages first and mutable repository
+metadata last. `packages-signing` and Secrets Store remain unused after the
+decision not to require a paid Cloudflare Container signer. See
+[`github-actions.md`](github-actions.md).
 
 ## Publication check
 

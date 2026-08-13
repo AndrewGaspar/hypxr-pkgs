@@ -46,6 +46,8 @@ rg -q 'max-age=31536000, immutable' bin/sync-repo ||
   fail "immutable package cache policy is missing"
 rg -q 'no-store, max-age=0, must-revalidate' bin/sync-repo ||
   fail "mutable repository metadata cache policy is missing"
+rg -q 'rclone check' bin/sync-repo && rg -q -- '--download --one-way' bin/sync-repo ||
+  fail "remote package bytes are not verified before database publication"
 jq -e '
   .repository_hostname == "hypxr.omedora.org" and
   .r2_buckets.published == "packages" and
@@ -80,5 +82,19 @@ for generator in bin/create-keyring-package bin/render-bootstrap; do
   [[ -x $generator ]] || fail "$generator is not executable"
   bash -n "$generator"
 done
+
+for release_tool in bin/create-release-manifest bin/verify-packages; do
+  [[ -x $release_tool ]] || fail "$release_tool is not executable"
+  bash -n "$release_tool"
+done
+
+rg -q '^    environment: staging$' .github/workflows/packages.yml ||
+  fail "package workflow does not isolate staging credentials"
+rg -q '^    environment: production$' .github/workflows/packages.yml ||
+  fail "package workflow does not use the protected production environment"
+if rg -n 'HYPXR_GPG_(PRIVATE_KEY|PASSPHRASE)' .github/workflows/packages.yml |
+  rg -v 'secrets\.HYPXR_GPG_'; then
+  fail "production signing values are not sourced from environment secrets"
+fi
 
 echo "Repository identity checks passed"

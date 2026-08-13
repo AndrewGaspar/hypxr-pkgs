@@ -63,12 +63,19 @@ bin/repo build --dry-run
 
 ## Release model
 
-The complete repository tree currently lives on the publication host. The
-planned production signer keeps the operational signing subkey in Cloudflare
-Secrets Store and consumes it only inside a private Worker/Container boundary;
-the offline primary key never enters Cloudflare. Until that signer is deployed,
-the commands below are the temporary host-side publication path. A complete
-edge release runs:
+GitHub Actions is the build and operational signing boundary. Every pull request
+builds the complete edge package wave and proves the signing path with a
+disposable key. Trusted `master` runs upload unsigned packages and a digest
+manifest to the private `packages-staging` bucket.
+
+Production publication is a manual workflow dispatch from `master` with the
+`publish` input enabled. The `production` GitHub environment must require an
+approving reviewer. It exposes only the replaceable operational signing subkey,
+its passphrase, and an R2 token restricted to `packages`; the offline primary
+and recovery secret keys never enter GitHub or Cloudflare.
+
+The equivalent host-side command remains available for local integration and
+recovery. A complete edge release runs:
 
 ```bash
 bin/repo release --mirror edge
@@ -101,9 +108,29 @@ Configure that host with `HYPXR_REPO_HOST` or `.repo-host`. The default remote
 repository is the rclone destination `hypxr:packages`; override it with
 `--sync-remote` or `--remote` while provisioning infrastructure.
 
+## GitHub environments
+
+The `staging` environment has:
+
+- `HYPXR_R2_ACCESS_KEY_ID` and `HYPXR_R2_SECRET_ACCESS_KEY`, restricted to
+  Object Read & Write on `packages-staging` only.
+
+The reviewer-protected `production` environment will have:
+
+- `HYPXR_GPG_PRIVATE_KEY`: passphrase-protected operational subkey export.
+- `HYPXR_GPG_PASSPHRASE`: operational subkey passphrase.
+- `HYPXR_R2_PRODUCTION_ACCESS_KEY_ID` and
+  `HYPXR_R2_PRODUCTION_SECRET_ACCESS_KEY`, restricted to `packages` only.
+- Non-secret variables `HYPXR_PUBLIC_KEY`, `HYPXR_PRIMARY_FINGERPRINT`, and
+  `HYPXR_SIGNING_SUBKEY_FINGERPRINT`.
+
+Do not populate production until the disposable workflow passes and the
+offline key ceremony is complete. Repository-level secrets must never include
+the signing key or production-bucket credentials.
+
 ## Repository host
 
-The legacy host-side release path may run on Debian, Ubuntu, or Arch:
+The optional host-side release path may run on Debian, Ubuntu, or Arch:
 
 ```bash
 bin/setup
@@ -120,21 +147,18 @@ export HYPXR_PRIMARY_FINGERPRINT='FULL40HEXPRIMARYFINGERPRINT'
 export HYPXR_SIGNING_SUBKEY_FINGERPRINT='FULL40HEXSIGNINGSUBKEYFINGERPRINT'
 ```
 
-Production will store only `HYPXR_GPG_PRIVATE_KEY` and
-`HYPXR_GPG_PASSPHRASE` in the Cloudflare Secrets Store named `hypxr`; the
-fingerprints and public key are non-secret configuration. The store is
-currently empty and reserved for the Cloudflare signer—it cannot supply the
-temporary external publisher. Use an offline certification key with a
-replaceable online signing subkey. CI may lint and build packages, but it must
-not receive the signing key or write to the published bucket.
+Use an offline certification key with a replaceable operational signing
+subkey. Ordinary CI receives only staging credentials and cannot write to the
+published bucket. Only an approved production job receives the operational
+subkey and public-bucket credentials.
 
 The live storage target is Cloudflare R2 at
 [`hypxr.omedora.org`](https://hypxr.omedora.org), with account, zone, bucket,
 Secrets Store, and cache-rule identifiers recorded in
 [`infrastructure/cloudflare.json`](infrastructure/cloudflare.json). See
 [`docs/cloudflare-r2.md`](docs/cloudflare-r2.md) for the publication setup. See
-[`docs/cloudflare-signer.md`](docs/cloudflare-signer.md) for the Secrets Store
-signing boundary and rollout plan. See
+[`docs/github-actions.md`](docs/github-actions.md) for the CI, staging, and
+protected publication boundaries. See
 [`docs/signing-key.md`](docs/signing-key.md) for the offline key ceremony,
 retention model, rotation procedure, and public-file generators.
 
