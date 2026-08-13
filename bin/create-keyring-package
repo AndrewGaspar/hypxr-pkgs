@@ -1,0 +1,146 @@
+#!/bin/bash
+
+set -euo pipefail
+
+BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
+PUBLIC_KEY=""
+PRIMARY_FINGERPRINT=""
+OUTPUT_DIR="$BUILD_ROOT/pkgbuilds/hypxr-keyring"
+
+usage() {
+  echo "Usage: $0 --public-key <file> --primary-fingerprint <40-hex> [--output-dir <dir>]"
+}
+
+while (( $# > 0 )); do
+  case $1 in
+  --public-key)
+    PUBLIC_KEY=${2:-}
+    shift 2
+    ;;
+  --primary-fingerprint)
+    PRIMARY_FINGERPRINT=${2:-}
+    shift 2
+    ;;
+  --output-dir)
+    OUTPUT_DIR=${2:-}
+    shift 2
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "ERROR: Unknown option: $1" >&2
+    usage >&2
+    exit 1
+    ;;
+  esac
+done
+
+PRIMARY_FINGERPRINT=${PRIMARY_FINGERPRINT//[[:space:]]/}
+PRIMARY_FINGERPRINT=${PRIMARY_FINGERPRINT^^}
+
+if [[ ! -f $PUBLIC_KEY ]]; then
+  echo "ERROR: Public key does not exist: $PUBLIC_KEY" >&2
+  exit 1
+fi
+
+if [[ ! $PRIMARY_FINGERPRINT =~ ^[0-9A-F]{40}$ ]]; then
+  echo "ERROR: Primary fingerprint must be exactly 40 hexadecimal characters" >&2
+  exit 1
+fi
+
+if [[ -e $OUTPUT_DIR ]]; then
+  echo "ERROR: Output directory already exists: $OUTPUT_DIR" >&2
+  exit 1
+fi
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+export GNUPGHOME="$work/gnupg"
+mkdir -m 0700 "$GNUPGHOME"
+
+if gpg --batch --list-packets "$PUBLIC_KEY" 2>/dev/null |
+  grep -Eq '^:(secret key|secret sub key) packet:'; then
+  echo "ERROR: Refusing a public-key input that contains secret key material" >&2
+  exit 1
+fi
+
+mapfile -t public_fingerprints < <(gpg --batch --show-keys --with-colons "$PUBLIC_KEY" 2>/dev/null |
+  awk -F: '
+    $1 == "pub" { want = 1; next }
+    want && $1 == "fpr" { print toupper($10); want = 0 }
+  ')
+
+if (( ${#public_fingerprints[@]} != 1 )); then
+  echo "ERROR: Public key must contain exactly one primary key" >&2
+  exit 1
+fi
+
+if [[ ${public_fingerprints[0]} != "$PRIMARY_FINGERPRINT" ]]; then
+  echo "ERROR: Public key fingerprint does not match the expected primary fingerprint" >&2
+  exit 1
+fi
+
+mkdir -p "$OUTPUT_DIR/.omarchy"
+gpg --batch --import "$PUBLIC_KEY" >/dev/null 2>&1
+gpg --batch --export "$PRIMARY_FINGERPRINT" >"$OUTPUT_DIR/hypxr.gpg"
+printf '%s:4:\n' "$PRIMARY_FINGERPRINT" >"$OUTPUT_DIR/hypxr-trusted"
+: >"$OUTPUT_DIR/hypxr-revoked"
+
+cat >"$OUTPUT_DIR/.omarchy/package.json" <<'EOF'
+{
+  "source": "local"
+}
+EOF
+
+cat >"$OUTPUT_DIR/hypxr-keyring.install" <<'EOF'
+post_install() {
+  if command -v pacman-key >/dev/null; then
+    pacman-key --populate hypxr
+  fi
+}
+
+post_upgrade() {
+  post_install
+}
+EOF
+
+cat >"$OUTPUT_DIR/LICENSE" <<'EOF'
+The HypXR public signing keys and trust metadata in this package may be copied,
+distributed, and used without restriction.
+EOF
+
+key_sha=$(sha512sum "$OUTPUT_DIR/hypxr.gpg" | awk '{ print $1 }')
+trusted_sha=$(sha512sum "$OUTPUT_DIR/hypxr-trusted" | awk '{ print $1 }')
+revoked_sha=$(sha512sum "$OUTPUT_DIR/hypxr-revoked" | awk '{ print $1 }')
+license_sha=$(sha512sum "$OUTPUT_DIR/LICENSE" | awk '{ print $1 }')
+pkgver=$(date -u +%Y%m%d)
+
+cat >"$OUTPUT_DIR/PKGBUILD" <<EOF
+pkgname=hypxr-keyring
+pkgver=$pkgver
+pkgrel=1
+pkgdesc='HypXR package repository signing keys'
+arch=('any')
+url='https://github.com/AndrewGaspar/hypxr-pkgs'
+license=('custom')
+install=hypxr-keyring.install
+source=('hypxr.gpg' 'hypxr-trusted' 'hypxr-revoked' 'LICENSE')
+sha512sums=(
+  '$key_sha'
+  '$trusted_sha'
+  '$revoked_sha'
+  '$license_sha'
+)
+
+package() {
+  install -Dm644 hypxr.gpg "\$pkgdir/usr/share/pacman/keyrings/hypxr.gpg"
+  install -Dm644 hypxr-trusted "\$pkgdir/usr/share/pacman/keyrings/hypxr-trusted"
+  install -Dm644 hypxr-revoked "\$pkgdir/usr/share/pacman/keyrings/hypxr-revoked"
+  install -Dm644 LICENSE "\$pkgdir/usr/share/licenses/\$pkgname/LICENSE"
+}
+EOF
+
+echo "Created $OUTPUT_DIR"
+echo "Primary fingerprint: $PRIMARY_FINGERPRINT"

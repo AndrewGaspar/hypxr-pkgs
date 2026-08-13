@@ -66,8 +66,13 @@ if [[ -z "$GPG_PASSPHRASE" ]]; then
   exit 1
 fi
 
-if [[ -z ${HYPXR_SIGNING_FINGERPRINT:-} ]]; then
-  print_error "HYPXR_SIGNING_FINGERPRINT environment variable not set"
+if [[ -z ${HYPXR_PRIMARY_FINGERPRINT:-} ]]; then
+  print_error "HYPXR_PRIMARY_FINGERPRINT environment variable not set"
+  exit 1
+fi
+
+if [[ -z ${HYPXR_SIGNING_SUBKEY_FINGERPRINT:-} ]]; then
+  print_error "HYPXR_SIGNING_SUBKEY_FINGERPRINT environment variable not set"
   exit 1
 fi
 
@@ -85,7 +90,8 @@ docker run --rm --platform linux/amd64 \
   -e MIRROR="$MIRROR" \
   -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
   -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
-  -e HYPXR_SIGNING_FINGERPRINT="$HYPXR_SIGNING_FINGERPRINT" \
+  -e HYPXR_PRIMARY_FINGERPRINT="$HYPXR_PRIMARY_FINGERPRINT" \
+  -e HYPXR_SIGNING_SUBKEY_FINGERPRINT="$HYPXR_SIGNING_SUBKEY_FINGERPRINT" \
   -v "$BUILD_ROOT/build-output:/build-output" \
   -v "$BUILD_DIR:/build:ro" \
   hypxr-pkg-builder:latest-x86_64-$MIRROR /build/sign.sh

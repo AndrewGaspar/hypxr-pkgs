@@ -108,19 +108,44 @@ bin/setup
 Signing credentials live outside Git in `/root/.hypxr/build-credentials`:
 
 ```bash
-export GPG_PRIVATE_KEY='...'
-export GPG_PASSPHRASE='...'
-export HYPXR_SIGNING_FINGERPRINT='FULL40HEXDIGITFINGERPRINT'
+export GPG_PRIVATE_KEY='armored operational signing-subkey export'
+export GPG_PASSPHRASE='operational signing-subkey passphrase'
+export HYPXR_PUBLIC_KEY='armored public certificate'
+export HYPXR_PRIMARY_FINGERPRINT='FULL40HEXPRIMARYFINGERPRINT'
+export HYPXR_SIGNING_SUBKEY_FINGERPRINT='FULL40HEXSIGNINGSUBKEYFINGERPRINT'
 ```
 
 Use an offline certification key with a replaceable online signing subkey.
 Restrict object-store credentials to the HypXR repository bucket or prefix.
 CI may lint and build packages, but it must not receive the signing key.
 
+The recommended storage target is Cloudflare R2 behind a long-lived custom
+hostname. See [`docs/cloudflare-r2.md`](docs/cloudflare-r2.md) for the bucket,
+rclone, cache, and publication setup. See
+[`docs/signing-key.md`](docs/signing-key.md) for the offline key ceremony,
+retention model, rotation procedure, and public-file generators.
+
 ## Client bootstrap
 
-The final bootstrap will verify the full HypXR signing-key fingerprint, import
-it with `pacman-key`, install `hypxr-keyring`, and add:
+After the production key ceremony, generate the keyring package and bootstrap
+from the public certificate. Both generators reject secret key material,
+fingerprint mismatches, placeholder hosts, and non-HTTPS repository URLs:
+
+```bash
+bin/create-keyring-package \
+  --public-key /secure/transfer/hypxr-public.asc \
+  --primary-fingerprint "$HYPXR_PRIMARY_FINGERPRINT"
+
+bin/render-bootstrap \
+  --public-key /secure/transfer/hypxr-public.asc \
+  --primary-fingerprint "$HYPXR_PRIMARY_FINGERPRINT" \
+  --repo-base https://packages.YOUR-DOMAIN \
+  --channel edge \
+  --output install-hypxr.sh
+```
+
+The generated bootstrap verifies the full primary fingerprint, imports it with
+`pacman-key`, installs `hypxr-keyring`, and only then adds:
 
 ```ini
 [hypxr]

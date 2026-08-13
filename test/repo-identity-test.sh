@@ -36,5 +36,24 @@ rg -q 'hypxr\.db\.tar\.zst\.sig' build/sign-database.sh ||
   fail "database signature is not produced"
 rg -q 'PackageRequired DatabaseRequired TrustedOnly' README.md ||
   fail "client signature policy is not documented"
+rg -q 'HYPXR_PRIMARY_FINGERPRINT' build/sign.sh ||
+  fail "signer does not pin the offline primary fingerprint"
+rg -q 'HYPXR_SIGNING_SUBKEY_FINGERPRINT' build/sign.sh ||
+  fail "signer does not select an explicit operational signing subkey"
+rg -q 'HYPXR_PUBLIC_KEY' build/verify-database.sh ||
+  fail "database verification does not use public-only key material"
+rg -q 'max-age=31536000, immutable' bin/sync-repo ||
+  fail "immutable package cache policy is missing"
+rg -q 'no-store, max-age=0, must-revalidate' bin/sync-repo ||
+  fail "mutable repository metadata cache policy is missing"
+
+if rg -n 'HYPXR_SIGNING_FINGERPRINT' bin build README.md; then
+  fail "found obsolete ambiguous signing fingerprint variable"
+fi
+
+for generator in bin/create-keyring-package bin/render-bootstrap; do
+  [[ -x $generator ]] || fail "$generator is not executable"
+  bash -n "$generator"
+done
 
 echo "Repository identity checks passed"

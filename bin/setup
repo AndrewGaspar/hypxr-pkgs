@@ -227,8 +227,8 @@ if [[ -f "$CREDENTIALS" ]]; then
   print_success "Signing credentials present: $CREDENTIALS"
 else
   print_warning "Missing $CREDENTIALS"
-  echo "    Must export GPG_PRIVATE_KEY, GPG_PASSPHRASE, and"
-  echo "    HYPXR_SIGNING_FINGERPRINT; the release"
+  echo "    Must export GPG_PRIVATE_KEY, GPG_PASSPHRASE, HYPXR_PUBLIC_KEY,"
+  echo "    HYPXR_PRIMARY_FINGERPRINT, and HYPXR_SIGNING_SUBKEY_FINGERPRINT; the release"
   echo "    services source it before signing."
 fi
 

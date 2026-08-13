@@ -26,8 +26,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z ${GPG_PRIVATE_KEY:-} || -z ${HYPXR_SIGNING_FINGERPRINT:-} ]]; then
-  print_error "GPG_PRIVATE_KEY and HYPXR_SIGNING_FINGERPRINT must be set"
+if [[ -z ${HYPXR_PUBLIC_KEY:-} || -z ${HYPXR_PRIMARY_FINGERPRINT:-} || \
+  -z ${HYPXR_SIGNING_SUBKEY_FINGERPRINT:-} ]]; then
+  print_error "HYPXR_PUBLIC_KEY, HYPXR_PRIMARY_FINGERPRINT, and"
+  print_error "HYPXR_SIGNING_SUBKEY_FINGERPRINT must be set"
   exit 1
 fi
 
@@ -37,8 +39,9 @@ build_docker_image "$BUILD_DIR" x86_64 "$MIRROR"
 docker run --rm --platform linux/amd64 \
   -e ARCH="$ARCH" \
   -e MIRROR="$MIRROR" \
-  -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
-  -e HYPXR_SIGNING_FINGERPRINT="$HYPXR_SIGNING_FINGERPRINT" \
+  -e HYPXR_PUBLIC_KEY="$HYPXR_PUBLIC_KEY" \
+  -e HYPXR_PRIMARY_FINGERPRINT="$HYPXR_PRIMARY_FINGERPRINT" \
+  -e HYPXR_SIGNING_SUBKEY_FINGERPRINT="$HYPXR_SIGNING_SUBKEY_FINGERPRINT" \
   -v "$BUILD_ROOT/repository:/repository:ro" \
   -v "$BUILD_DIR:/build:ro" \
   "hypxr-pkg-builder:latest-x86_64-$MIRROR" /build/verify-database.sh
