@@ -51,9 +51,9 @@ for database in hypxr.db.tar.zst hypxr.files.tar.zst; do
     exit 1
   fi
 
-  gpg --batch --yes --pinentry-mode loopback \
-    --passphrase "$GPG_PASSPHRASE" \
-    --detach-sign --local-user "$HYPXR_SIGNING_SUBKEY_FINGERPRINT!" "$database"
+  printf '%s\n' "$GPG_PASSPHRASE" | gpg --batch --yes \
+    --pinentry-mode loopback --passphrase-fd 0 --detach-sign \
+    --local-user "$HYPXR_SIGNING_SUBKEY_FINGERPRINT!" "$database"
   gpg --batch --verify "$database.sig" "$database"
 done
 

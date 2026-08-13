@@ -224,7 +224,16 @@ echo ""
 print_info "Checking credentials..."
 
 if [[ -f "$CREDENTIALS" ]]; then
-  print_success "Signing credentials present: $CREDENTIALS"
+  credentials_owner=$(stat -c '%U:%G' "$CREDENTIALS")
+  credentials_mode=$(stat -c '%a' "$CREDENTIALS")
+  if [[ $credentials_owner == "root:root" && $credentials_mode == "600" ]]; then
+    print_success "Signing credentials present and protected: $CREDENTIALS"
+  elif [[ "$CHECK_ONLY" == true ]]; then
+    print_warning "$CREDENTIALS must be owned by root:root with mode 0600"
+  else
+    print_error "$CREDENTIALS must be owned by root:root with mode 0600"
+    exit 1
+  fi
 else
   print_warning "Missing $CREDENTIALS"
   echo "    Must export GPG_PRIVATE_KEY, GPG_PASSPHRASE, HYPXR_PUBLIC_KEY,"

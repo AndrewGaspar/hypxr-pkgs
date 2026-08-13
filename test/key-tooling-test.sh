@@ -44,7 +44,7 @@ fi
 "$ROOT/bin/render-bootstrap" \
   --public-key "$work/public.asc" \
   --primary-fingerprint "$primary_fingerprint" \
-  --repo-base https://packages.hypxr.dev \
+  --repo-base https://hypxr.omedora.org \
   --channel edge \
   --output "$work/install-hypxr.sh" >/dev/null
 

@@ -63,8 +63,12 @@ bin/repo build --dry-run
 
 ## Release model
 
-The signing key and complete repository tree live only on the publication
-host. A complete edge release runs:
+The complete repository tree currently lives on the publication host. The
+planned production signer keeps the operational signing subkey in Cloudflare
+Secrets Store and consumes it only inside a private Worker/Container boundary;
+the offline primary key never enters Cloudflare. Until that signer is deployed,
+the commands below are the temporary host-side publication path. A complete
+edge release runs:
 
 ```bash
 bin/repo release --mirror edge
@@ -99,13 +103,14 @@ repository is the rclone destination `hypxr:packages`; override it with
 
 ## Repository host
 
-The host may run Debian, Ubuntu, or Arch:
+The legacy host-side release path may run on Debian, Ubuntu, or Arch:
 
 ```bash
 bin/setup
 ```
 
-Signing credentials live outside Git in `/root/.hypxr/build-credentials`:
+For local integration tests, signing credentials live outside Git in
+`/root/.hypxr/build-credentials`:
 
 ```bash
 export GPG_PRIVATE_KEY='armored operational signing-subkey export'
@@ -115,13 +120,21 @@ export HYPXR_PRIMARY_FINGERPRINT='FULL40HEXPRIMARYFINGERPRINT'
 export HYPXR_SIGNING_SUBKEY_FINGERPRINT='FULL40HEXSIGNINGSUBKEYFINGERPRINT'
 ```
 
-Use an offline certification key with a replaceable online signing subkey.
-Restrict object-store credentials to the HypXR repository bucket or prefix.
-CI may lint and build packages, but it must not receive the signing key.
+Production will store only `HYPXR_GPG_PRIVATE_KEY` and
+`HYPXR_GPG_PASSPHRASE` in the Cloudflare Secrets Store named `hypxr`; the
+fingerprints and public key are non-secret configuration. The store is
+currently empty and reserved for the Cloudflare signer—it cannot supply the
+temporary external publisher. Use an offline certification key with a
+replaceable online signing subkey. CI may lint and build packages, but it must
+not receive the signing key or write to the published bucket.
 
-The recommended storage target is Cloudflare R2 behind a long-lived custom
-hostname. See [`docs/cloudflare-r2.md`](docs/cloudflare-r2.md) for the bucket,
-rclone, cache, and publication setup. See
+The live storage target is Cloudflare R2 at
+[`hypxr.omedora.org`](https://hypxr.omedora.org), with account, zone, bucket,
+Secrets Store, and cache-rule identifiers recorded in
+[`infrastructure/cloudflare.json`](infrastructure/cloudflare.json). See
+[`docs/cloudflare-r2.md`](docs/cloudflare-r2.md) for the publication setup. See
+[`docs/cloudflare-signer.md`](docs/cloudflare-signer.md) for the Secrets Store
+signing boundary and rollout plan. See
 [`docs/signing-key.md`](docs/signing-key.md) for the offline key ceremony,
 retention model, rotation procedure, and public-file generators.
 
@@ -139,7 +152,7 @@ bin/create-keyring-package \
 bin/render-bootstrap \
   --public-key /secure/transfer/hypxr-public.asc \
   --primary-fingerprint "$HYPXR_PRIMARY_FINGERPRINT" \
-  --repo-base https://packages.YOUR-DOMAIN \
+  --repo-base https://hypxr.omedora.org \
   --channel edge \
   --output install-hypxr.sh
 ```
@@ -150,12 +163,12 @@ The generated bootstrap verifies the full primary fingerprint, imports it with
 ```ini
 [hypxr]
 SigLevel = PackageRequired DatabaseRequired TrustedOnly
-Server = https://packages.example.invalid/stable/$arch
+Server = https://hypxr.omedora.org/edge/$arch
 ```
 
-The public hostname and signing-key fingerprint remain intentionally unset
-until the storage provider and offline key are created. Never publish a
-bootstrap script with placeholder trust data.
+The public hostname is live. The signing-key fingerprint remains intentionally
+unset until the offline ceremony is complete. Never publish a bootstrap script
+with placeholder trust data.
 
 After bootstrap, the intended one-command install is:
 

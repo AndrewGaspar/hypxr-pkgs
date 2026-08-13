@@ -90,9 +90,10 @@ for pkg_file in $PACKAGE_FILES; do
   rm -f "$pkg_file.sig"
   
   # Sign the package
-  if gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
-    --detach-sign --use-agent --no-armor \
-    --local-user "$HYPXR_SIGNING_SUBKEY_FINGERPRINT!" "$pkg_file" 2>/dev/null; then
+  if printf '%s\n' "$GPG_PASSPHRASE" | gpg --batch --yes \
+    --pinentry-mode loopback --passphrase-fd 0 --detach-sign --use-agent \
+    --no-armor --local-user "$HYPXR_SIGNING_SUBKEY_FINGERPRINT!" \
+    "$pkg_file" 2>/dev/null; then
     echo "✓"
     SIGNED_COUNT=$((SIGNED_COUNT + 1))
   else

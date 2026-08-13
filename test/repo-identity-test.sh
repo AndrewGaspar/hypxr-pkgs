@@ -46,6 +46,31 @@ rg -q 'max-age=31536000, immutable' bin/sync-repo ||
   fail "immutable package cache policy is missing"
 rg -q 'no-store, max-age=0, must-revalidate' bin/sync-repo ||
   fail "mutable repository metadata cache policy is missing"
+jq -e '
+  .repository_hostname == "hypxr.omedora.org" and
+  .r2_buckets.published == "packages" and
+  .r2_buckets.staging == "packages-staging" and
+  .r2_buckets.signing == "packages-signing" and
+  .secrets_store_name == "hypxr" and
+  (.account_id | test("^[0-9a-f]{32}$")) and
+  (.zone_id | test("^[0-9a-f]{32}$")) and
+  (.secrets_store_id | test("^[0-9a-f]{32}$"))
+' infrastructure/cloudflare.json >/dev/null ||
+  fail "tracked Cloudflare resource identity is incomplete"
+rg -q 'https://hypxr\.omedora\.org/edge/\$arch' README.md ||
+  fail "client repository URL does not use the live Cloudflare hostname"
+rg -q 'b56864690db4b781dbf36b94155d808c\.r2\.cloudflarestorage\.com' \
+  docs/cloudflare-r2.md || fail "rclone endpoint does not use the live R2 account"
+if rg -n 'packages\.hypxr\.dev|packages\.YOUR-DOMAIN|packages\.example\.invalid|ACCOUNT_ID' \
+  README.md docs infrastructure; then
+  fail "found stale repository-host placeholder"
+fi
+if rg -n -- '-e (GPG_PRIVATE_KEY|GPG_PASSPHRASE)=' bin; then
+  fail "Docker invocation exposes a signing secret in process arguments"
+fi
+if rg -n -- '--passphrase "\$GPG_PASSPHRASE"' build; then
+  fail "GPG invocation exposes the passphrase in process arguments"
+fi
 
 if rg -n 'HYPXR_SIGNING_FINGERPRINT' bin build README.md; then
   fail "found obsolete ambiguous signing fingerprint variable"

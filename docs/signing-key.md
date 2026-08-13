@@ -35,7 +35,7 @@ export GNUPGHOME=/secure/offline/hypxr-gnupg
 install -d -m 0700 "$GNUPGHOME"
 
 gpg --quick-generate-key \
-  'HypXR Package Repository <packages@YOUR-DOMAIN>' \
+  'HypXR Package Repository <packages@omedora.org>' \
   ed25519 cert 5y
 
 PRIMARY_FINGERPRINT=$(gpg --with-colons --list-secret-keys |
@@ -80,6 +80,15 @@ export HYPXR_PRIMARY_FINGERPRINT='40_HEX_PRIMARY_FINGERPRINT'
 export HYPXR_SIGNING_SUBKEY_FINGERPRINT='40_HEX_OPERATIONAL_SUBKEY_FINGERPRINT'
 ```
 
+The production secret names are `HYPXR_GPG_PRIVATE_KEY` and
+`HYPXR_GPG_PASSPHRASE` in the `hypxr` Cloudflare Secrets Store. The store is
+only a binding source for the planned Cloudflare signer; it cannot be read by
+the temporary external publication host. Do not populate either value until
+the signer has been reviewed and deployed with a disposable test key. Measure
+the armored operational export first: each Secrets Store value is limited to
+1,024 bytes. Never substitute an export containing the primary or recovery
+secret key.
+
 Generate the keyring package and edge installer only after independently
 checking the recorded primary fingerprint:
 
@@ -91,7 +100,7 @@ bin/create-keyring-package \
 bin/render-bootstrap \
   --public-key /secure/transfer/hypxr-public.asc \
   --primary-fingerprint "$HYPXR_PRIMARY_FINGERPRINT" \
-  --repo-base https://packages.YOUR-DOMAIN \
+  --repo-base https://hypxr.omedora.org \
   --channel edge \
   --output install-hypxr.sh
 ```

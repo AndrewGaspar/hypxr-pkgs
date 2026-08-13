@@ -1,0 +1,20 @@
+{
+  "account_id": "b56864690db4b781dbf36b94155d808c",
+  "zone_id": "366e3604eec5d6086a4d5be9fc2160bd",
+  "zone_name": "omedora.org",
+  "repository_hostname": "hypxr.omedora.org",
+  "r2_buckets": {
+    "published": "packages",
+    "staging": "packages-staging",
+    "signing": "packages-signing"
+  },
+  "r2_location": "WNAM",
+  "r2_storage_class": "Standard",
+  "secrets_store_id": "c65ee6059f66451f974cd386d72e745f",
+  "secrets_store_name": "hypxr",
+  "cache_ruleset_id": "7777ce2c6fb54a509a3d15197aac5c53",
+  "cache_rules": {
+    "mutable_metadata_bypass": "8fc0c4710249415aa9d438ecdb612bf2",
+    "immutable_packages": "2a4d4b9f7e7d45b09a2987aed3592b84"
+  }
+}

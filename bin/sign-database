@@ -49,10 +49,10 @@ make_dir_writable "$REPO_DIR"
 docker run --rm --platform linux/amd64 \
   -e ARCH="$ARCH" \
   -e MIRROR="$MIRROR" \
-  -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
-  -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
-  -e HYPXR_PRIMARY_FINGERPRINT="$HYPXR_PRIMARY_FINGERPRINT" \
-  -e HYPXR_SIGNING_SUBKEY_FINGERPRINT="$HYPXR_SIGNING_SUBKEY_FINGERPRINT" \
+  -e GPG_PRIVATE_KEY \
+  -e GPG_PASSPHRASE \
+  -e HYPXR_PRIMARY_FINGERPRINT \
+  -e HYPXR_SIGNING_SUBKEY_FINGERPRINT \
   -v "$BUILD_ROOT/repository:/repository" \
   -v "$BUILD_DIR:/build:ro" \
   "hypxr-pkg-builder:latest-x86_64-$MIRROR" /build/sign-database.sh
