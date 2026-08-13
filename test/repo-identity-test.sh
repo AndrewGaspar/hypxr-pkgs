@@ -78,6 +78,12 @@ if rg -n 'HYPXR_SIGNING_FINGERPRINT' bin build README.md; then
   fail "found obsolete ambiguous signing fingerprint variable"
 fi
 
+rg -Fq 'chmod -R a+rwX' helpers/docker-helpers.sh ||
+  fail "bind-mounted build directories are not writable by the container user"
+if rg -n 'chown -R.*id -u' helpers/docker-helpers.sh; then
+  fail "host ownership is incorrectly used for container write access"
+fi
+
 for generator in bin/create-keyring-package bin/render-bootstrap; do
   [[ -x $generator ]] || fail "$generator is not executable"
   bash -n "$generator"

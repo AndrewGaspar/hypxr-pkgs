@@ -61,9 +61,13 @@ get_platform_arg() {
 
 make_dir_writable() {
   local dir="$1"
-  if [ "$(id -u)" -eq 0 ]; then
-    chmod -R 777 "$dir"
+  # The image runs as its internal builder user, whose UID is not guaranteed to
+  # match the host user. Bind-mounted build and repository trees therefore need
+  # mode-based write access; changing host ownership does not make them writable
+  # to that container UID.
+  if (( $(id -u) == 0 )); then
+    chmod -R a+rwX "$dir"
   else
-    sudo chown -R $(id -u):$(id -g) "$dir" 2>/dev/null || chmod -R 777 "$dir"
+    sudo chmod -R a+rwX "$dir" 2>/dev/null || chmod -R a+rwX "$dir"
   fi
 }
