@@ -12,6 +12,8 @@ done
 "$ROOT/test/repo-identity-test.sh"
 "$ROOT/test/package-wave-test.sh"
 "$ROOT/test/database-signing-test.sh"
+"$ROOT/test/package-signing-test.sh"
+"$ROOT/test/release-manifest-test.sh"
 "$ROOT/test/key-tooling-test.sh"
 "$ROOT/bin/repo" build --dry-run
 

@@ -2,8 +2,8 @@
 
 The repository trust root is an offline, certification-only OpenPGP primary
 key. Package and database releases use a separate, expiring signing subkey.
-The publication host must never receive an export containing the usable
-primary secret key.
+The protected production environment must never receive an export containing
+the usable primary secret key.
 
 ## Custody model
 
@@ -13,7 +13,8 @@ primary secret key.
 - Keep a recovery signing subkey offline but include its public half in the
   published keyring. It can sign a keyring update if the active publisher key
   is lost or compromised.
-- Put only the active operational signing subkey on the publication host.
+- Put only the active operational signing subkey in the protected production
+  GitHub environment.
 - Give operational signing subkeys a one-year expiry and rotate with 60–90
   days of overlap.
 - Test both offline backups after creation and annually.
@@ -35,7 +36,7 @@ export GNUPGHOME=/secure/offline/hypxr-gnupg
 install -d -m 0700 "$GNUPGHOME"
 
 gpg --quick-generate-key \
-  'HypXR Package Repository <packages@YOUR-DOMAIN>' \
+  'HypXR Package Repository <packages@omedora.org>' \
   ed25519 cert 5y
 
 PRIMARY_FINGERPRINT=$(gpg --with-colons --list-secret-keys |
@@ -70,7 +71,7 @@ subkey. Verify it on a disposable machine before placing it on the publisher:
 its primary secret key should be a `sec#` stub, the operational signing subkey
 should be usable, and the recovery subkey should have no secret material.
 
-The publisher environment uses:
+The production environment uses:
 
 ```bash
 export GPG_PRIVATE_KEY='armored operational subkey export only'
@@ -79,6 +80,12 @@ export HYPXR_PUBLIC_KEY='armored public certificate'
 export HYPXR_PRIMARY_FINGERPRINT='40_HEX_PRIMARY_FINGERPRINT'
 export HYPXR_SIGNING_SUBKEY_FINGERPRINT='40_HEX_OPERATIONAL_SUBKEY_FINGERPRINT'
 ```
+
+The production GitHub environment secret names are `HYPXR_GPG_PRIVATE_KEY` and
+`HYPXR_GPG_PASSPHRASE`. Do not populate either value until the workflow has
+passed with a disposable test key. The signer rejects a usable primary secret
+key or any secret subkey other than the exact operational signing subkey. Never
+substitute an export containing the primary or recovery secret key.
 
 Generate the keyring package and edge installer only after independently
 checking the recorded primary fingerprint:
@@ -91,7 +98,7 @@ bin/create-keyring-package \
 bin/render-bootstrap \
   --public-key /secure/transfer/hypxr-public.asc \
   --primary-fingerprint "$HYPXR_PRIMARY_FINGERPRINT" \
-  --repo-base https://packages.YOUR-DOMAIN \
+  --repo-base https://hypxr.omedora.org \
   --channel edge \
   --output install-hypxr.sh
 ```

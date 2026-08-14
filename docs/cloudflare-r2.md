@@ -1,8 +1,7 @@
 # Cloudflare R2 publication setup
 
-The recommended origin is a private Cloudflare R2 Standard bucket named
-`packages`, exposed through a long-lived custom hostname such as
-`packages.hypxr.dev`. The repository layout remains:
+The live origin is a private Cloudflare R2 Standard bucket named `packages`,
+exposed through `hypxr.omedora.org`. The repository layout is:
 
 ```text
 /edge/x86_64/
@@ -13,33 +12,43 @@ R2 fits the existing `hypxr:packages` rclone destination, provides S3 API and
 Range request support, and avoids egress charges. Do not use the development
 `r2.dev` hostname for production clients.
 
-## Provisioning
+## Provisioned resources
 
-1. Put the chosen long-lived domain in Cloudflare DNS.
-2. Create an R2 Standard bucket named `packages`.
-3. Create an R2 API token restricted to Object Read & Write for only that
-   bucket. Repository clients use the public custom hostname and do not need
-   this token.
-4. Attach the production custom domain to the bucket and disable its `r2.dev`
-   public URL.
-5. Configure the publication host's rclone remote:
+The non-secret resource identifiers are tracked in
+[`../infrastructure/cloudflare.json`](../infrastructure/cloudflare.json).
+
+- Published bucket: `packages`, WNAM, Standard storage class.
+- Private upload bucket: `packages-staging`, WNAM, Standard storage class.
+- Reserved private bucket: `packages-signing`, WNAM, Standard storage class.
+- Custom domain: `hypxr.omedora.org`, minimum TLS 1.2.
+- Development `r2.dev` public URL: disabled.
+- Unused Secrets Store: `hypxr`, empty.
+- Cache rule: repository databases and signatures bypass cache.
+- Cache rule: versioned package archives and signatures cache for one year;
+  4xx and 5xx responses have a zero-second cache TTL.
+
+GitHub Actions uses separate R2 Object Read & Write Account API tokens for the
+private staging bucket and public repository bucket. Wrangler OAuth does not
+authenticate rclone, and Secrets Store values cannot be read by GitHub Actions.
+Repository clients use the public custom hostname and need no token.
+
+Create each token in **Storage & databases → R2 → Overview → Manage API
+Tokens**. Choose **Object Read & Write** and scope it to exactly one bucket.
+The staging pair belongs in the `staging` GitHub environment; the `packages`
+pair belongs only in the reviewer-protected `production` environment. Do not
+paste either value into Git, chat, or a shell argument. The workflow configures
+rclone from masked environment values. A recovery host can use:
 
    ```ini
    [hypxr]
    type = s3
    provider = Cloudflare
-   access_key_id = REDACTED
-   secret_access_key = REDACTED
-   endpoint = https://ACCOUNT_ID.r2.cloudflarestorage.com
+   env_auth = true
+   endpoint = https://b56864690db4b781dbf36b94155d808c.r2.cloudflarestorage.com
    region = auto
    no_check_bucket = true
    acl = private
    ```
-
-6. Add a Cloudflare Cache Rule that bypasses cache for every path matching
-   `*/hypxr.db*` or `*/hypxr.files*`, including detached signatures.
-7. Cache immutable `*.pkg.tar.zst` and `*.pkg.tar.zst.sig` objects for one year.
-   Set cached 404 TTL to zero.
 
 The sync code also assigns these origin metadata policies:
 
@@ -48,9 +57,16 @@ The sync code also assigns these origin metadata policies:
 - Repository databases and database signatures: `no-store, max-age=0,
   must-revalidate, no-transform`.
 
-The explicit Cloudflare bypass remains required for mutable metadata. R2 is
+The explicit Cloudflare bypass is installed for mutable metadata. R2 is
 strongly consistent at the bucket API, but caching overwritten custom-domain
-objects can otherwise expose different database and signature generations.
+objects could otherwise expose different database and signature generations.
+
+Ordinary CI receives write access only to `packages-staging`. The manually
+approved production job receives a separate token for `packages`, verifies and
+signs every artifact, then publishes packages first and mutable repository
+metadata last. `packages-signing` and Secrets Store remain unused after the
+decision not to require a paid Cloudflare Container signer. See
+[`github-actions.md`](github-actions.md).
 
 ## Publication check
 

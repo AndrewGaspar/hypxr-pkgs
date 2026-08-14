@@ -22,8 +22,14 @@ gpg --batch --pinentry-mode loopback --passphrase test-passphrase \
 signing_subkey_fingerprint=$(gpg --batch --with-colons --with-subkey-fingerprint \
   --list-secret-keys "$primary_fingerprint" |
   awk -F: '$1 == "ssb" { subkey = 1; next } subkey && $1 == "fpr" { print $10; exit }')
+gpg --batch --pinentry-mode loopback --passphrase test-passphrase \
+  --quick-add-key "$primary_fingerprint" rsa2048 sign 1d >/dev/null 2>&1
 private_key=$(gpg --batch --pinentry-mode loopback --passphrase test-passphrase \
   --armor --export-secret-subkeys "$signing_subkey_fingerprint!")
+multiple_subkeys_key=$(gpg --batch --pinentry-mode loopback --passphrase test-passphrase \
+  --armor --export-secret-subkeys "$primary_fingerprint")
+full_private_key=$(gpg --batch --pinentry-mode loopback --passphrase test-passphrase \
+  --armor --export-secret-keys "$primary_fingerprint")
 public_key=$(gpg --batch --armor --export "$primary_fingerprint")
 
 mkdir -p "$work/repository"
@@ -39,6 +45,30 @@ HYPXR_PRIMARY_FINGERPRINT="$primary_fingerprint" \
 HYPXR_SIGNING_SUBKEY_FINGERPRINT="$signing_subkey_fingerprint" \
 REPO_DIR="$work/repository" \
   "$ROOT/build/sign-database.sh"
+
+rm -rf "$GNUPGHOME"
+mkdir -m 0700 "$GNUPGHOME"
+if GPG_PRIVATE_KEY="$full_private_key" \
+  GPG_PASSPHRASE=test-passphrase \
+  HYPXR_PRIMARY_FINGERPRINT="$primary_fingerprint" \
+  HYPXR_SIGNING_SUBKEY_FINGERPRINT="$signing_subkey_fingerprint" \
+  REPO_DIR="$work/repository" \
+  "$ROOT/build/sign-database.sh" >/dev/null 2>&1; then
+  echo "FAIL: signer accepted a usable primary secret key" >&2
+  exit 1
+fi
+
+rm -rf "$GNUPGHOME"
+mkdir -m 0700 "$GNUPGHOME"
+if GPG_PRIVATE_KEY="$multiple_subkeys_key" \
+  GPG_PASSPHRASE=test-passphrase \
+  HYPXR_PRIMARY_FINGERPRINT="$primary_fingerprint" \
+  HYPXR_SIGNING_SUBKEY_FINGERPRINT="$signing_subkey_fingerprint" \
+  REPO_DIR="$work/repository" \
+  "$ROOT/build/sign-database.sh" >/dev/null 2>&1; then
+  echo "FAIL: signer accepted an extra recovery secret subkey" >&2
+  exit 1
+fi
 
 rm -rf "$GNUPGHOME"
 mkdir -m 0700 "$GNUPGHOME"

@@ -1,0 +1,143 @@
+#!/bin/bash
+
+set -euo pipefail
+
+BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
+DIRECTORY=""
+OUTPUT=""
+REPOSITORY=""
+SOURCE_COMMIT=""
+WORKFLOW_RUN_ID=""
+WORKFLOW_RUN_ATTEMPT=""
+MIRROR=edge
+ARCH=x86_64
+
+require_value() {
+  if (( $# < 2 )) || [[ -z $2 ]]; then
+    echo "Option $1 requires a value" >&2
+    exit 1
+  fi
+}
+
+while (( $# > 0 )); do
+  case $1 in
+  --directory)
+    require_value "$@"
+    DIRECTORY=$2
+    shift 2
+    ;;
+  --output)
+    require_value "$@"
+    OUTPUT=$2
+    shift 2
+    ;;
+  --repository)
+    require_value "$@"
+    REPOSITORY=$2
+    shift 2
+    ;;
+  --source-commit)
+    require_value "$@"
+    SOURCE_COMMIT=$2
+    shift 2
+    ;;
+  --workflow-run-id)
+    require_value "$@"
+    WORKFLOW_RUN_ID=$2
+    shift 2
+    ;;
+  --workflow-run-attempt)
+    require_value "$@"
+    WORKFLOW_RUN_ATTEMPT=$2
+    shift 2
+    ;;
+  --mirror)
+    require_value "$@"
+    MIRROR=$2
+    shift 2
+    ;;
+  --arch)
+    require_value "$@"
+    ARCH=$2
+    shift 2
+    ;;
+  *)
+    echo "Unknown option: $1" >&2
+    exit 1
+    ;;
+  esac
+done
+
+for value in DIRECTORY OUTPUT REPOSITORY SOURCE_COMMIT WORKFLOW_RUN_ID WORKFLOW_RUN_ATTEMPT; do
+  if [[ -z ${!value} ]]; then
+    echo "Missing required value: $value" >&2
+    exit 1
+  fi
+done
+
+[[ -d $DIRECTORY ]] || { echo "Package directory not found: $DIRECTORY" >&2; exit 1; }
+[[ $SOURCE_COMMIT =~ ^[0-9a-f]{40}$ ]] || { echo "Source commit must be a full Git SHA" >&2; exit 1; }
+[[ $WORKFLOW_RUN_ID =~ ^[0-9]+$ ]] || { echo "Workflow run ID must be numeric" >&2; exit 1; }
+[[ $WORKFLOW_RUN_ATTEMPT =~ ^[0-9]+$ ]] || { echo "Workflow run attempt must be numeric" >&2; exit 1; }
+
+BUILD_ROOT=$BUILD_ROOT
+PKGBUILDS_DIR="$BUILD_ROOT/pkgbuilds"
+source "$BUILD_ROOT/helpers/package-metadata.sh"
+
+mapfile -t expected_pkgbases < <(packages_for_mirror "$MIRROR")
+mapfile -t package_files < <(find "$DIRECTORY" -maxdepth 1 -type f -name '*.pkg.tar.zst' -print | sort)
+
+(( ${#package_files[@]} > 0 )) || { echo "No package archives found in $DIRECTORY" >&2; exit 1; }
+
+items=$(mktemp)
+actual=$(mktemp)
+trap 'rm -f "$items" "$actual"' EXIT
+
+: >"$items"
+: >"$actual"
+
+for package in "${package_files[@]}"; do
+  metadata=$(bsdtar -xOqf "$package" .PKGINFO)
+  pkgname=$(awk -F' = ' '$1 == "pkgname" { print $2; exit }' <<<"$metadata")
+  pkgbase=$(awk -F' = ' '$1 == "pkgbase" { print $2; exit }' <<<"$metadata")
+  pkgver=$(awk -F' = ' '$1 == "pkgver" { print $2; exit }' <<<"$metadata")
+  package_arch=$(awk -F' = ' '$1 == "arch" { print $2; exit }' <<<"$metadata")
+
+  [[ -n $pkgname && -n $pkgbase && -n $pkgver && -n $package_arch ]] || {
+    echo "Incomplete .PKGINFO in $package" >&2
+    exit 1
+  }
+
+  printf '%s\n' "$pkgbase" >>"$actual"
+  jq -n \
+    --arg filename "${package##*/}" \
+    --arg pkgname "$pkgname" \
+    --arg pkgbase "$pkgbase" \
+    --arg pkgver "$pkgver" \
+    --arg arch "$package_arch" \
+    --arg sha256 "$(sha256sum "$package" | awk '{ print $1 }')" \
+    --argjson bytes "$(stat -c %s "$package")" \
+    '{filename: $filename, pkgname: $pkgname, pkgbase: $pkgbase, pkgver: $pkgver, arch: $arch, bytes: $bytes, sha256: $sha256}' \
+    >>"$items"
+done
+
+if ! diff -u \
+  <(printf '%s\n' "${expected_pkgbases[@]}" | sort) \
+  <(sort -u "$actual"); then
+  echo "Built package set does not match the $MIRROR catalog" >&2
+  exit 1
+fi
+
+mkdir -p "$(dirname "$OUTPUT")"
+jq -s \
+  --arg repository "$REPOSITORY" \
+  --arg source_commit "$SOURCE_COMMIT" \
+  --arg workflow_run_id "$WORKFLOW_RUN_ID" \
+  --argjson workflow_run_attempt "$WORKFLOW_RUN_ATTEMPT" \
+  --arg mirror "$MIRROR" \
+  --arg arch "$ARCH" \
+  '{schema: 1, repository: $repository, source_commit: $source_commit, workflow_run_id: $workflow_run_id, workflow_run_attempt: $workflow_run_attempt, mirror: $mirror, arch: $arch, packages: .}' \
+  "$items" >"$OUTPUT"
+
+jq empty "$OUTPUT"
+echo "Created release manifest for ${#package_files[@]} package(s): $OUTPUT"
