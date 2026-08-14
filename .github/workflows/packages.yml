@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -62,8 +62,17 @@ jobs:
             --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
             --mirror "$MIRROR" \
             --arch "$ARCH"
+          bin/verify-release-manifest \
+            --manifest release/release-manifest.json \
+            --directory release/packages \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-commit "$GITHUB_SHA" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --mirror "$MIRROR" \
+            --arch "$ARCH"
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.RELEASE_ARTIFACT }}
           path: release/
@@ -76,16 +85,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.RELEASE_ARTIFACT }}
           path: release
 
+      - name: Install release verification dependencies
+        run: sudo apt-get update && sudo apt-get install --yes libarchive-tools
+
       - name: Sign and verify with a disposable key
         run: |
           set -euo pipefail
+          bin/verify-release-manifest \
+            --manifest release/release-manifest.json \
+            --directory release/packages \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-commit "$GITHUB_SHA" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --mirror "$MIRROR" \
+            --arch "$ARCH"
           mkdir -p "build-output/$MIRROR/$ARCH"
           cp release/packages/*.pkg.tar.zst "build-output/$MIRROR/$ARCH/"
 
@@ -141,15 +162,15 @@ jobs:
     timeout-minutes: 15
     environment: staging
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.RELEASE_ARTIFACT }}
           path: release
 
       - name: Install R2 client
-        run: sudo apt-get update && sudo apt-get install --yes rclone
+        run: sudo apt-get update && sudo apt-get install --yes libarchive-tools rclone
 
       - name: Upload immutable staging release
         env:
@@ -163,6 +184,15 @@ jobs:
           RCLONE_CONFIG_STAGE_ACL: private
         run: |
           set -euo pipefail
+          bin/verify-release-manifest \
+            --manifest release/release-manifest.json \
+            --directory release/packages \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-commit "$GITHUB_SHA" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --mirror "$MIRROR" \
+            --arch "$ARCH"
           prefix="incoming/github/$GITHUB_REPOSITORY/$GITHUB_SHA/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/$MIRROR/$ARCH"
           rclone copy release/packages "stage:packages-staging/$prefix" \
             --immutable \
@@ -194,19 +224,28 @@ jobs:
       RCLONE_CONFIG_HYPXR_NO_CHECK_BUCKET: true
       RCLONE_CONFIG_HYPXR_ACL: private
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.RELEASE_ARTIFACT }}
           path: release
 
       - name: Install publication dependencies
-        run: sudo apt-get update && sudo apt-get install --yes rclone
+        run: sudo apt-get update && sudo apt-get install --yes libarchive-tools rclone
 
       - name: Sign and publish edge repository
         run: |
           set -euo pipefail
+          bin/verify-release-manifest \
+            --manifest release/release-manifest.json \
+            --directory release/packages \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-commit "$GITHUB_SHA" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --mirror "$MIRROR" \
+            --arch "$ARCH"
           mkdir -p "build-output/$MIRROR/$ARCH"
           cp release/packages/*.pkg.tar.zst "build-output/$MIRROR/$ARCH/"
           bin/repo sign --mirror "$MIRROR" --arch "$ARCH"

@@ -48,6 +48,8 @@ rg -q 'no-store, max-age=0, must-revalidate' bin/sync-repo ||
   fail "mutable repository metadata cache policy is missing"
 rg -q 'rclone check' bin/sync-repo && rg -q -- '--download --one-way' bin/sync-repo ||
   fail "remote package bytes are not verified before database publication"
+rg -q -- '--exclude "\*\.sig"' bin/sync-repo ||
+  fail "timestamp-varying signatures are incorrectly byte-compared on repeat publication"
 jq -e '
   .repository_hostname == "hypxr.omedora.org" and
   .r2_buckets.published == "packages" and
@@ -89,7 +91,7 @@ for generator in bin/create-keyring-package bin/render-bootstrap; do
   bash -n "$generator"
 done
 
-for release_tool in bin/create-release-manifest bin/verify-packages; do
+for release_tool in bin/create-release-manifest bin/verify-release-manifest bin/verify-packages; do
   [[ -x $release_tool ]] || fail "$release_tool is not executable"
   bash -n "$release_tool"
 done

@@ -2,12 +2,15 @@
 
 pkgname=hypxrland-legacy-config
 pkgver=3.8.4
-pkgrel=2
+pkgrel=3
 pkgdesc='Classic Omarchy Hyprland defaults adapted for HypXRland on Quattro'
 arch=('any')
 url='https://github.com/basecamp/omarchy'
 license=('MIT')
-depends=('omarchy-settings=4.0.0rc3')
+depends=(
+  'omarchy-settings>=4.0.0rc3'
+  'omarchy-settings<4.1'
+)
 
 _commit=8fcc9d6048af4cb0e3af8512c78049857a3b53dd
 source=(

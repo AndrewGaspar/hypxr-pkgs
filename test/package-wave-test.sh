@@ -59,11 +59,13 @@ rg -q -- '-DCMAKE_INSTALL_LIBDIR=lib' pkgbuilds/hypxrva/PKGBUILD
 rg -q '/usr/share/hypxrvoice/models/ggml-base\.en\.bin' \
   pkgbuilds/hypxrvoice-model-base-en/PKGBUILD
 
-rg -q "'omarchy-settings=4\.0\.0rc3'" \
+rg -q "'omarchy-settings>=4\.0\.0rc3'" \
   pkgbuilds/hypxrland-legacy-config/PKGBUILD
+rg -q "'omarchy-settings<4\.1'" pkgbuilds/hypxrland-legacy-config/PKGBUILD
 rg -Fq "s|~/.local/share/omarchy|/usr/share/omarchy|g" \
   pkgbuilds/hypxrland-legacy-config/PKGBUILD
-rg -q "'omarchy=4\.0\.0rc3'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+rg -q "'omarchy>=4\.0\.0rc3'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+rg -q "'omarchy<4\.1'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'hypxrland-legacy-config'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'hypxrland-stack'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD

@@ -40,6 +40,45 @@ jq -e '
   all(.packages[]; (.sha256 | test("^[0-9a-f]{64}$")) and .bytes > 0)
 ' "$work/release-manifest.json" >/dev/null
 
+"$ROOT/bin/verify-release-manifest" \
+  --manifest "$work/release-manifest.json" \
+  --directory "$work/packages" \
+  --repository AndrewGaspar/hypxr-pkgs \
+  --source-commit 0123456789abcdef0123456789abcdef01234567 \
+  --workflow-run-id 123 \
+  --workflow-run-attempt 1 \
+  --mirror edge \
+  --arch x86_64
+
+if "$ROOT/bin/verify-release-manifest" \
+  --manifest "$work/release-manifest.json" \
+  --directory "$work/packages" \
+  --repository AndrewGaspar/hypxr-pkgs \
+  --source-commit fedcba9876543210fedcba9876543210fedcba98 \
+  --workflow-run-id 123 \
+  --workflow-run-attempt 1 \
+  --mirror edge \
+  --arch x86_64 >/dev/null 2>&1; then
+  echo "FAIL: release manifest accepted the wrong source commit" >&2
+  exit 1
+fi
+
+printf 'changed\n' >>"$work/packages/hypxrland-1.0-1-any.pkg.tar.zst"
+if "$ROOT/bin/verify-release-manifest" \
+  --manifest "$work/release-manifest.json" \
+  --directory "$work/packages" \
+  --repository AndrewGaspar/hypxr-pkgs \
+  --source-commit 0123456789abcdef0123456789abcdef01234567 \
+  --workflow-run-id 123 \
+  --workflow-run-attempt 1 \
+  --mirror edge \
+  --arch x86_64 >/dev/null 2>&1; then
+  echo "FAIL: release manifest accepted changed package content" >&2
+  exit 1
+fi
+bsdtar -caf "$work/packages/hypxrland-1.0-1-any.pkg.tar.zst" \
+  -C "$work/pkgroot/hypxrland" .PKGINFO
+
 rm "$work/packages/hypxrhud-1.0-1-any.pkg.tar.zst"
 if "$ROOT/bin/create-release-manifest" \
   --directory "$work/packages" \

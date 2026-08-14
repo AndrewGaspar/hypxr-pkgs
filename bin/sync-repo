@@ -239,9 +239,10 @@ fi
 if ! rclone check "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
   --exclude "hypxr.db*" \
   --exclude "hypxr.files*" \
+  --exclude "*.sig" \
   --download --one-way --copy-links; then
-  print_error "Remote package verification failed — not publishing the database"
-  print_warning "A versioned filename is absent or has different content."
+  print_error "Remote package archive verification failed — not publishing the database"
+  print_warning "A versioned package filename is absent or has different content."
   exit 1
 fi
 

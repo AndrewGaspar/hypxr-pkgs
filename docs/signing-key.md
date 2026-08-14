@@ -81,14 +81,11 @@ export HYPXR_PRIMARY_FINGERPRINT='40_HEX_PRIMARY_FINGERPRINT'
 export HYPXR_SIGNING_SUBKEY_FINGERPRINT='40_HEX_OPERATIONAL_SUBKEY_FINGERPRINT'
 ```
 
-The production secret names are `HYPXR_GPG_PRIVATE_KEY` and
-`HYPXR_GPG_PASSPHRASE` in the `hypxr` Cloudflare Secrets Store. The store is
-only a binding source for the planned Cloudflare signer; it cannot be read by
-the temporary external publication host. Do not populate either value until
-the signer has been reviewed and deployed with a disposable test key. Measure
-the armored operational export first: each Secrets Store value is limited to
-1,024 bytes. Never substitute an export containing the primary or recovery
-secret key.
+The production GitHub environment secret names are `HYPXR_GPG_PRIVATE_KEY` and
+`HYPXR_GPG_PASSPHRASE`. Do not populate either value until the workflow has
+passed with a disposable test key. The signer rejects a usable primary secret
+key or any secret subkey other than the exact operational signing subkey. Never
+substitute an export containing the primary or recovery secret key.
 
 Generate the keyring package and edge installer only after independently
 checking the recorded primary fingerprint:

@@ -2,7 +2,7 @@
 
 pkgname=hypxrland-omarchy
 pkgver=1.0.0
-pkgrel=2
+pkgrel=3
 pkgdesc='Omarchy XR session installed beside the stable Omarchy session'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
@@ -10,7 +10,8 @@ license=('MIT')
 depends=(
   'hypxrland-stack'
   'hypxrland-legacy-config'
-  'omarchy=4.0.0rc3'
+  'omarchy>=4.0.0rc3'
+  'omarchy<4.1'
 )
 makedepends=('desktop-file-utils')
 source=(

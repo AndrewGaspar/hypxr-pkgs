@@ -1,0 +1,103 @@
+#!/bin/bash
+
+set -euo pipefail
+
+MANIFEST=""
+DIRECTORY=""
+REPOSITORY=""
+SOURCE_COMMIT=""
+WORKFLOW_RUN_ID=""
+WORKFLOW_RUN_ATTEMPT=""
+MIRROR=""
+ARCH=""
+
+require_value() {
+  if (( $# < 2 )) || [[ -z $2 ]]; then
+    echo "Option $1 requires a value" >&2
+    exit 1
+  fi
+}
+
+while (( $# > 0 )); do
+  case $1 in
+  --manifest) require_value "$@"; MANIFEST=$2; shift 2 ;;
+  --directory) require_value "$@"; DIRECTORY=$2; shift 2 ;;
+  --repository) require_value "$@"; REPOSITORY=$2; shift 2 ;;
+  --source-commit) require_value "$@"; SOURCE_COMMIT=$2; shift 2 ;;
+  --workflow-run-id) require_value "$@"; WORKFLOW_RUN_ID=$2; shift 2 ;;
+  --workflow-run-attempt) require_value "$@"; WORKFLOW_RUN_ATTEMPT=$2; shift 2 ;;
+  --mirror) require_value "$@"; MIRROR=$2; shift 2 ;;
+  --arch) require_value "$@"; ARCH=$2; shift 2 ;;
+  *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+for value in MANIFEST DIRECTORY REPOSITORY SOURCE_COMMIT WORKFLOW_RUN_ID WORKFLOW_RUN_ATTEMPT MIRROR ARCH; do
+  if [[ -z ${!value} ]]; then
+    echo "Missing required value: $value" >&2
+    exit 1
+  fi
+done
+
+[[ -f $MANIFEST ]] || { echo "Release manifest not found: $MANIFEST" >&2; exit 1; }
+[[ -d $DIRECTORY ]] || { echo "Package directory not found: $DIRECTORY" >&2; exit 1; }
+
+jq -e \
+  --arg repository "$REPOSITORY" \
+  --arg source_commit "$SOURCE_COMMIT" \
+  --arg workflow_run_id "$WORKFLOW_RUN_ID" \
+  --argjson workflow_run_attempt "$WORKFLOW_RUN_ATTEMPT" \
+  --arg mirror "$MIRROR" \
+  --arg arch "$ARCH" '
+    .schema == 1 and
+    .repository == $repository and
+    .source_commit == $source_commit and
+    .workflow_run_id == $workflow_run_id and
+    .workflow_run_attempt == $workflow_run_attempt and
+    .mirror == $mirror and
+    .arch == $arch and
+    (.packages | type == "array" and length > 0) and
+    all(.packages[];
+      (.filename | test("^[^/]+[.]pkg[.]tar[.]zst$")) and
+      (.pkgname | type == "string" and length > 0) and
+      (.pkgbase | type == "string" and length > 0) and
+      (.pkgver | type == "string" and length > 0) and
+      (.arch | type == "string" and length > 0) and
+      (.bytes | type == "number" and . > 0) and
+      (.sha256 | test("^[0-9a-f]{64}$")))
+  ' "$MANIFEST" >/dev/null || {
+    echo "Release manifest identity or schema is invalid" >&2
+    exit 1
+  }
+
+manifest_files=$(mktemp)
+actual_files=$(mktemp)
+trap 'rm -f "$manifest_files" "$actual_files"' EXIT
+
+jq -r '.packages[].filename' "$MANIFEST" | sort >"$manifest_files"
+find "$DIRECTORY" -maxdepth 1 -type f -name '*.pkg.tar.zst' -printf '%f\n' | sort >"$actual_files"
+
+if ! diff -u "$manifest_files" "$actual_files"; then
+  echo "Package directory does not match the release manifest" >&2
+  exit 1
+fi
+
+while IFS=$'\t' read -r filename pkgname pkgbase pkgver package_arch bytes sha256; do
+  package="$DIRECTORY/$filename"
+  [[ $(stat -c %s "$package") == "$bytes" ]] || {
+    echo "Package size does not match manifest: $filename" >&2
+    exit 1
+  }
+  [[ $(sha256sum "$package" | awk '{ print $1 }') == "$sha256" ]] || {
+    echo "Package digest does not match manifest: $filename" >&2
+    exit 1
+  }
+
+  metadata=$(bsdtar -xOqf "$package" .PKGINFO)
+  [[ $(awk -F' = ' '$1 == "pkgname" { print $2; exit }' <<<"$metadata") == "$pkgname" ]]
+  [[ $(awk -F' = ' '$1 == "pkgbase" { print $2; exit }' <<<"$metadata") == "$pkgbase" ]]
+  [[ $(awk -F' = ' '$1 == "pkgver" { print $2; exit }' <<<"$metadata") == "$pkgver" ]]
+  [[ $(awk -F' = ' '$1 == "arch" { print $2; exit }' <<<"$metadata") == "$package_arch" ]]
+done < <(jq -r '.packages[] | [.filename, .pkgname, .pkgbase, .pkgver, .arch, (.bytes | tostring), .sha256] | @tsv' "$MANIFEST")
+
+echo "Verified release manifest and $(wc -l <"$manifest_files") package(s)"
