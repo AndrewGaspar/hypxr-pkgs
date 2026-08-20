@@ -36,7 +36,7 @@ jq -e '
   .schema == 1 and
   .repository == "AndrewGaspar/hypxr-pkgs" and
   .source_commit == "0123456789abcdef0123456789abcdef01234567" and
-  (.packages | length) == 11 and
+  (.packages | length) == 12 and
   all(.packages[]; (.sha256 | test("^[0-9a-f]{64}$")) and .bytes > 0)
 ' "$work/release-manifest.json" >/dev/null
 

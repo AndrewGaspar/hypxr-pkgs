@@ -7,6 +7,7 @@ cd "$ROOT"
 
 packages=(
   hypxrhud
+  hypxr-keyring
   hypxrland
   hypxrland-legacy-config
   hypxrland-omarchy
@@ -37,6 +38,7 @@ for package in "${packages[@]}"; do
 done
 
 for package in \
+  hypxr-keyring \
   hypxrland-legacy-config \
   hypxrland-omarchy \
   hypxrland-stack \
@@ -82,6 +84,24 @@ rg -q '^exec /usr/bin/hypxrland-session "\$@"$' \
 
 setup_tmp=$(mktemp -d)
 trap 'rm -rf "$setup_tmp"' EXIT
+
+if gpg --batch --list-packets pkgbuilds/hypxr-keyring/hypxr.gpg 2>/dev/null |
+  grep -Eq '^:(secret key|secret sub key) packet:'; then
+  echo "FAIL: hypxr-keyring contains secret key material" >&2
+  exit 1
+fi
+mapfile -t trust_fingerprints < <(
+  gpg --batch --show-keys --with-colons pkgbuilds/hypxr-keyring/hypxr.gpg |
+    awk -F: '$1 == "fpr" { print $10 }'
+)
+(( ${#trust_fingerprints[@]} == 2 ))
+rg -Fq "EXPECTED_PRIMARY_FINGERPRINT='${trust_fingerprints[0]}'" install-hypxr.sh
+awk '/^-----BEGIN PGP PUBLIC KEY BLOCK-----$/,/^-----END PGP PUBLIC KEY BLOCK-----$/' \
+  install-hypxr.sh >"$setup_tmp/installer-key.asc"
+gpg --batch --dearmor --output "$setup_tmp/installer-key.gpg" \
+  "$setup_tmp/installer-key.asc"
+cmp pkgbuilds/hypxr-keyring/hypxr.gpg "$setup_tmp/installer-key.gpg"
+
 mkdir -p "$setup_tmp/config/hypr"
 printf '%s\n' 'packaged template' >"$setup_tmp/template"
 HOME="$setup_tmp/home" \

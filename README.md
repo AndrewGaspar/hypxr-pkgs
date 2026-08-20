@@ -41,8 +41,8 @@ use:
 ```
 
 The initial repository is x86_64-only except for architecture-independent
-model and metadata packages. Do not publish aarch64 artifacts until the native
-code and runtime behavior have been tested there.
+keyring, model, and metadata packages. Do not publish aarch64 artifacts until
+the native code and runtime behavior have been tested there.
 
 ## Local builds
 
@@ -190,9 +190,10 @@ SigLevel = PackageRequired DatabaseRequired TrustedOnly
 Server = https://hypxr.omedora.org/edge/$arch
 ```
 
-The public hostname is live. The signing-key fingerprint remains intentionally
-unset until the offline ceremony is complete. Never publish a bootstrap script
-with placeholder trust data.
+The temporary dogfood trust root is pinned to fingerprint
+`74C1F43250AF5125B17FF459644F84BDBE2CAFCE` and expires on November 18, 2026.
+Replace it before onboarding users outside the controlled dogfood group. Never
+publish a bootstrap script with placeholder trust data.
 
 After bootstrap, the intended one-command install is:
 

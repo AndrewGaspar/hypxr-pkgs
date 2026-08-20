@@ -234,6 +234,27 @@ jobs:
       - name: Install publication dependencies
         run: sudo apt-get update && sudo apt-get install --yes libarchive-tools rclone
 
+      - name: Verify checked-in trust artifacts
+        run: |
+          set -euo pipefail
+          trust_check=$(mktemp -d)
+          trap 'rm -rf "$trust_check"' EXIT
+          printf '%s\n' "$HYPXR_PUBLIC_KEY" >"$trust_check/hypxr-public.asc"
+          bin/create-keyring-package \
+            --public-key "$trust_check/hypxr-public.asc" \
+            --primary-fingerprint "$HYPXR_PRIMARY_FINGERPRINT" \
+            --output-dir "$trust_check/hypxr-keyring"
+          for file in hypxr.gpg hypxr-trusted hypxr-revoked; do
+            cmp "pkgbuilds/hypxr-keyring/$file" "$trust_check/hypxr-keyring/$file"
+          done
+          bin/render-bootstrap \
+            --public-key "$trust_check/hypxr-public.asc" \
+            --primary-fingerprint "$HYPXR_PRIMARY_FINGERPRINT" \
+            --repo-base https://hypxr.omedora.org \
+            --channel "$MIRROR" \
+            --output "$trust_check/install-hypxr.sh"
+          cmp install-hypxr.sh "$trust_check/install-hypxr.sh"
+
       - name: Sign and publish edge repository
         run: |
           set -euo pipefail
