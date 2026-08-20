@@ -190,16 +190,22 @@ SigLevel = PackageRequired DatabaseRequired TrustedOnly
 Server = https://hypxr.omedora.org/edge/$arch
 ```
 
-The temporary dogfood trust root is pinned to fingerprint
-`74C1F43250AF5125B17FF459644F84BDBE2CAFCE` and expires on November 18, 2026.
-Replace it before onboarding users outside the controlled dogfood group. Never
-publish a bootstrap script with placeholder trust data.
+### Dogfood installation
 
-After bootstrap, the intended one-command install is:
+The temporary dogfood trust root is pinned to fingerprint
+`74C1F43250AF5125B17FF459644F84BDBE2CAFCE`. On a dogfood Omarchy machine,
+enable the signed repository and install the HypXR stack with:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/AndrewGaspar/hypxr-pkgs/master/install-hypxr.sh | sudo bash
 sudo pacman -Syu hypxrland-omarchy
 ```
+
+Test the XR hardware after installation, then log out and confirm that the
+stock Omarchy session still starts. Begin replacing this temporary trust root
+by October 19, 2026. The signing key and production R2 token expire on November
+18, 2026. Replace them before onboarding users outside the controlled dogfood
+group. Never publish a bootstrap script with placeholder trust data.
 
 ## Upstream maintenance
 
