@@ -1,0 +1,22 @@
+pkgname=hypxr-keyring
+pkgver=20260820
+pkgrel=1
+pkgdesc='HypXR package repository signing keys'
+arch=('any')
+url='https://github.com/AndrewGaspar/hypxr-pkgs'
+license=('custom')
+install=hypxr-keyring.install
+source=('hypxr.gpg' 'hypxr-trusted' 'hypxr-revoked' 'LICENSE')
+sha512sums=(
+  'b00c5fa3e6c1a55eaabd7336923ceae24b347b9cad8f09a9cce083fbc6a689b8724399269ef8519bcf0d71b1b57b589564a8d49619b142c68763347d810bf9cd'
+  '17078135e791c2227e887edfe09672955a3976ca13f2d1641063db3429d2180c3c67cd9fc29d57455798de18155d9bf81c01d51f1855e388d6353d069abec61e'
+  'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
+  '4c64420a51bfd7b2e334f8a3f6522ca007f63838efe44b0cb1845814c619202e971e1a326c3d5a1d5dcbdf53a4d33631406913e1580d1dae0bb415a37ce16d5d'
+)
+
+package() {
+  install -Dm644 hypxr.gpg "$pkgdir/usr/share/pacman/keyrings/hypxr.gpg"
+  install -Dm644 hypxr-trusted "$pkgdir/usr/share/pacman/keyrings/hypxr-trusted"
+  install -Dm644 hypxr-revoked "$pkgdir/usr/share/pacman/keyrings/hypxr-revoked"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
