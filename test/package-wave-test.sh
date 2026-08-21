@@ -127,7 +127,6 @@ done
 
 legacy_package=pkgbuilds/hypxrland-legacy-config
 [[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-1" ]]
-(( $(vercmp 4.0.0-1 3.8.4-3) > 0 ))
 mapfile -t legacy_dependencies < <(
   cd "$legacy_package"
   bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
