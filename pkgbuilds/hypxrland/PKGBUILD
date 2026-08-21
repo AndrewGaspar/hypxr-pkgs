@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrland
-pkgver=0.56.1.r285.g25c9b3685
+pkgver=0.56.2.r374.g67200a838
 pkgrel=1
 pkgdesc='Hyprland-based spatial OpenXR compositor installed beside stable Hyprland'
 arch=('x86_64')
@@ -28,7 +28,7 @@ depends=(
   'libhyprcursor.so'
   'hyprgraphics'
   'libhyprgraphics.so'
-  'hyprland>=0.56.1'
+  'hyprland>=0.56.2'
   'hyprland<0.57'
   'hyprlang'
   'libhyprlang.so'
@@ -82,8 +82,8 @@ depends=(
 )
 makedepends=(
   'cmake'
-  'glaze'
   'hyprland-protocols'
+  'hyprwayland-scanner'
   'meson'
   'ninja'
   'pkgconf'
@@ -93,17 +93,22 @@ makedepends=(
 )
 options=('!debug')
 
-_commit=25c9b36859b81f412254e6446eae716f242215a6
+_commit=67200a838356a206c4819595a2f733299ab4da63
+_glaze_commit=b518eec7a22e56ffa238b072c07f47efa7cea97f
 _udis86_commit=5336633af70f3917760a6d441ff02d93477b0c86
 source=(
   "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
+  "glaze-$_glaze_commit.tar.gz::https://github.com/stephenberry/glaze/archive/$_glaze_commit.tar.gz"
   "udis86-$_udis86_commit.tar.gz::https://github.com/canihavesomecoffee/udis86/archive/$_udis86_commit.tar.gz"
   'hypxrland-session'
+  'README.package.md'
 )
 sha256sums=(
-  '8cfe5359406788915bc8c2bb9e8c2b628749bf256ebb6bb69924dbacb1165599'
+  'e93c5f7eb7b363d9744641e9368de7025700a9e1c5683392e79af7fc03c68954'
+  '0d108903feb443df316fb53eaec2fd6c1c6d96b368562ad830debc5c6c29c304'
   '2f459fafa19535ef1be417bf7614e4f92475e5787d7ba76df20287cc29d1b5a9'
-  '595d6a862aa8bc9c3bb5cd9d7213a796b5d63d6bae0ab97dc1cd72c8da5ae634'
+  '6ed32e1dc75e5e983964e12bd746cc0e31003d07e193e5b598291b3f8be7cce9'
+  '96b273af40e386a78f29ddf2698ef22e2d309be23e1582869f9ab81a02e49cc7'
 )
 
 prepare() {
@@ -115,16 +120,17 @@ build() {
   export GIT_COMMIT_HASH=$_commit
   export GIT_BRANCH=hypxrland
   export GIT_COMMIT_MESSAGE="packaged HypXRland snapshot ${_commit:0:10}"
-  export GIT_COMMIT_DATE=2026-08-11
+  export GIT_COMMIT_DATE=2026-08-21
   export GIT_DIRTY=clean
-  export GIT_TAG="v0.56.1-285-g${_commit:0:10}"
-  export GIT_COMMITS=7928
+  export GIT_TAG="v0.56.2-374-g${_commit:0:10}"
+  export GIT_COMMITS=8035
 
   cmake -S "Hyprland-$_commit" -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_SKIP_RPATH=ON \
+    -DFETCHCONTENT_SOURCE_DIR_GLAZE="$srcdir/glaze-$_glaze_commit" \
     -DNO_HYPRPM=ON \
     -DNO_TESTS=ON \
     -DBUILD_TESTING=OFF \
@@ -166,4 +172,10 @@ package() {
     "$pkgdir/usr/share/doc/$pkgname/00-overview.md"
   install -Dm644 "Hyprland-$_commit/docs/openxr/05-configuration.md" \
     "$pkgdir/usr/share/doc/$pkgname/05-configuration.md"
+  install -Dm644 "Hyprland-$_commit/contrib/mpv-hypxr-stereo.lua" \
+    "$pkgdir/usr/share/hypxrland/mpv/mpv-hypxr-stereo.lua"
+  install -Dm644 "Hyprland-$_commit/contrib/hyprland-xr.lua" \
+    "$pkgdir/usr/share/doc/$pkgname/hyprland-xr.lua"
+  install -Dm644 README.package.md \
+    "$pkgdir/usr/share/doc/$pkgname/README.package.md"
 }

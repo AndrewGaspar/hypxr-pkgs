@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrvoice
-pkgver=0.20260802.1.g9e899bbff
+pkgver=0.20260812.1.g7ce7d33b2
 pkgrel=1
 pkgdesc='Local-first voice control daemon for HypXRland'
 arch=('x86_64')
@@ -26,7 +26,7 @@ makedepends=(
 optdepends=('espeak-ng: spoken responses')
 options=('!debug')
 
-_commit=9e899bbffbd9c7817ab8e1fc80cf512aed6f98fc
+_commit=7ce7d33b20a3ddc37e9f758b57a60a2d0849fbdd
 _whisper_commit=080bbbe85230f624f0b52127f1ae1218247989f9
 _llama_commit=961e4b26a7dd0e01e20599b27d709a74788ecb55
 source=(
@@ -37,7 +37,7 @@ source=(
   'hypxrvoiced.service'
 )
 sha256sums=(
-  '237089d8d3c7c4f451f5c8891066c14fe2d2e28ec8ec52b11528b3c8e2d8d09e'
+  '11b5a24cad4a8e80c0bbdb585004cb00f3aa5e03b6747826f4a89db1b08ca0a3'
   'cb27b23a357642bcd7189ad24d9c8b770ba49f7a49216b899798d52c02f8beaf'
   'd4a00aaa88ff92938281ce6521b632ca021284f3f8386993deba6f02d19b5f12'
   'b501f789ebca1c50e2f1294372f94ac9cc66da3393773f6a7452cbdb898a143a'

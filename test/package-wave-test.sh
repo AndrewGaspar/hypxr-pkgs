@@ -7,6 +7,7 @@ cd "$ROOT"
 
 packages=(
   hypxrhud
+  hypxrcompose
   hypxr-keyring
   hypxrland
   hypxrland-legacy-config
@@ -48,6 +49,7 @@ done
 
 for package in \
   hypxrhud \
+  hypxrcompose \
   hypxrland \
   hypxrpaper \
   hypxrva \
@@ -58,17 +60,96 @@ for package in \
 done
 
 rg -q -- '-DCMAKE_INSTALL_LIBDIR=lib' pkgbuilds/hypxrva/PKGBUILD
+rg -q "'ffmpeg'" pkgbuilds/hypxrcompose/PKGBUILD
+rg -q 'upstream hypxr branch' pkgbuilds/wivrn-hypxr/PKGBUILD
+rg -q "'libboost_iostreams\.so'" pkgbuilds/wivrn-hypxr/PKGBUILD
+rg -q -- '-DWIVRN_BUILD_TEST=ON' pkgbuilds/wivrn-hypxr/PKGBUILD
+rg -q 'build/server/take-bundle' pkgbuilds/wivrn-hypxr/PKGBUILD
+wivrn_assert_patch=pkgbuilds/wivrn-hypxr/enable-assertions-in-server-tests.patch
+[[ -f $wivrn_assert_patch ]]
+rg -Fq "'enable-assertions-in-server-tests.patch'" \
+  pkgbuilds/wivrn-hypxr/PKGBUILD
+expected_wivrn_assert_patch_sum=$(
+  cd pkgbuilds/wivrn-hypxr
+  bash -c '
+    source PKGBUILD
+    for ((i = 0; i < ${#source[@]}; i++)); do
+      if [[ ${source[i]} == "enable-assertions-in-server-tests.patch" ]]; then
+        printf "%s" "${sha256sums[i]}"
+      fi
+    done
+  '
+)
+[[ $(sha256sum "$wivrn_assert_patch" | cut -d' ' -f1) == "$expected_wivrn_assert_patch_sum" ]]
+rg -q 'patch -d "WiVRn-\$_commit" -p1 --forward < enable-assertions-in-server-tests\.patch' \
+  pkgbuilds/wivrn-hypxr/PKGBUILD
+rg -q 'foreach\(target transfer-pacer take-bundle\)' "$wivrn_assert_patch"
+rg -q 'target_compile_options\(\$\{target\} PRIVATE -UNDEBUG\)' \
+  "$wivrn_assert_patch"
 rg -q '/usr/share/hypxrvoice/models/ggml-base\.en\.bin' \
   pkgbuilds/hypxrvoice-model-base-en/PKGBUILD
+rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
+  pkgbuilds/hypxrvoice-model-base-en/PKGBUILD
 
-rg -q "'omarchy-settings>=4\.0\.0rc3'" \
-  pkgbuilds/hypxrland-legacy-config/PKGBUILD
-rg -q "'omarchy-settings<4\.1'" pkgbuilds/hypxrland-legacy-config/PKGBUILD
-rg -Fq "s|~/.local/share/omarchy|/usr/share/omarchy|g" \
-  pkgbuilds/hypxrland-legacy-config/PKGBUILD
-rg -q "'omarchy>=4\.0\.0rc3'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+declare -A collision_pkgrel=(
+  [hypxr-keyring]=2
+  [hypxrpaper]=2
+  [hypxrva]=2
+  [hypxrvoice-model-base-en]=2
+  [monado-xreal]=2
+)
+for package in "${!collision_pkgrel[@]}"; do
+  actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
+  [[ $actual_pkgrel == "${collision_pkgrel[$package]}" ]]
+done
+
+expected_stack_deps=(
+  'hypxrland>=0.56.2.r374.g67200a838-1'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-1'
+  'hypxrhud>=0.20260816.1.gf96d0e794-1'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-2'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-2'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-1'
+  'hypxrvoice-model-base-en>=1.0.0-2'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-1'
+)
+mapfile -t actual_stack_deps < <(
+  cd pkgbuilds/hypxrland-stack
+  bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
+)
+[[ ${actual_stack_deps[*]} == "${expected_stack_deps[*]}" ]]
+
+rg -q '/usr/share/hypxrland/mpv/mpv-hypxr-stereo\.lua' \
+  pkgbuilds/hypxrland/PKGBUILD pkgbuilds/hypxrland/README.package.md
+for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
+  rg -Fq "$hud_doc" pkgbuilds/hypxrhud/PKGBUILD
+done
+
+legacy_package=pkgbuilds/hypxrland-legacy-config
+[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-1" ]]
+mapfile -t legacy_dependencies < <(
+  cd "$legacy_package"
+  bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
+)
+[[ ${legacy_dependencies[*]} == "hypxrland-omarchy>=1.1.0" ]]
+mapfile -t legacy_sources < <(
+  cd "$legacy_package"
+  bash -c 'source PKGBUILD; printf "%s\n" "${source[@]}"'
+)
+[[ ${legacy_sources[*]} == "README.md LICENSE" ]]
+! rg -q 'basecamp/omarchy|autostart-quattro|default/hypr' "$legacy_package/PKGBUILD"
+
+for package in "${packages[@]}"; do
+  [[ $package == "hypxrland-legacy-config" ]] && continue
+  if (cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]:-}"') |
+    grep -Eq '^hypxrland-legacy-config([<>=].*)?$'; then
+    echo "FAIL: $package still depends on hypxrland-legacy-config" >&2
+    exit 1
+  fi
+done
+
+rg -q "'omarchy>=4\.0\.0'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'omarchy<4\.1'" pkgbuilds/hypxrland-omarchy/PKGBUILD
-rg -q "'hypxrland-legacy-config'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'hypxrland-stack'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD
 
@@ -108,17 +189,49 @@ HOME="$setup_tmp/home" \
 XDG_CONFIG_HOME="$setup_tmp/config" \
 HYPXRLAND_OMARCHY_TEMPLATE="$setup_tmp/template" \
   bash pkgbuilds/hypxrland-omarchy/omarchy-setup-hypxrland >/dev/null
-printf '%s\n' 'user customization' >>"$setup_tmp/config/hypr/hyprland-xr.conf"
+printf '%s\n' 'user customization' >>"$setup_tmp/config/hypr/hyprland-xr.lua"
 HOME="$setup_tmp/home" \
 XDG_CONFIG_HOME="$setup_tmp/config" \
 HYPXRLAND_OMARCHY_TEMPLATE="$setup_tmp/template" \
   bash pkgbuilds/hypxrland-omarchy/omarchy-setup-hypxrland >/dev/null
-[[ $(<"$setup_tmp/config/hypr/hyprland-xr.conf") == $'packaged template\nuser customization' ]]
+[[ $(<"$setup_tmp/config/hypr/hyprland-xr.lua") == $'packaged template\nuser customization' ]]
 
-rg -q '^source = /usr/share/omarchy/default/hypr/autostart\.conf$' \
-  pkgbuilds/hypxrland-omarchy/hyprland-xr.conf
-rg -q '^openxr \{$' pkgbuilds/hypxrland-omarchy/hyprland-xr.conf
-rg -q '^exec-once = systemctl --user start wivrn\.service$' \
-  pkgbuilds/hypxrland-omarchy/hyprland-xr.conf
+legacy_tmp="$setup_tmp/legacy"
+mkdir -p "$legacy_tmp/config/hypr" "$legacy_tmp/bin"
+printf '%s\n' 'legacy customization' >"$legacy_tmp/config/hypr/hyprland-xr.conf"
+cat >"$legacy_tmp/bin/uwsm" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$@"
+EOF
+chmod 0755 "$legacy_tmp/bin/uwsm"
+
+HOME="$legacy_tmp/home" \
+XDG_CONFIG_HOME="$legacy_tmp/config" \
+HYPXRLAND_OMARCHY_TEMPLATE="$setup_tmp/template" \
+  bash pkgbuilds/hypxrland-omarchy/omarchy-setup-hypxrland >/dev/null
+[[ ! -e $legacy_tmp/config/hypr/hyprland-xr.lua ]]
+[[ $(<"$legacy_tmp/config/hypr/hyprland-xr.conf") == "legacy customization" ]]
+
+PATH="$legacy_tmp/bin:$PATH" \
+HOME="$legacy_tmp/home" \
+XDG_CONFIG_HOME="$legacy_tmp/config" \
+  bash pkgbuilds/hypxrland/hypxrland-session \
+  >"$legacy_tmp/command" 2>"$legacy_tmp/warning"
+grep -Fxq "$legacy_tmp/config/hypr/hyprland-xr.conf" "$legacy_tmp/command"
+grep -Fq 'legacy hyprland-xr.conf is deprecated' "$legacy_tmp/warning"
+
+printf '%s\n' 'lua customization' >"$legacy_tmp/config/hypr/hyprland-xr.lua"
+PATH="$legacy_tmp/bin:$PATH" \
+HOME="$legacy_tmp/home" \
+XDG_CONFIG_HOME="$legacy_tmp/config" \
+  bash pkgbuilds/hypxrland/hypxrland-session \
+  >"$legacy_tmp/lua-command" 2>"$legacy_tmp/lua-warning"
+grep -Fxq "$legacy_tmp/config/hypr/hyprland-xr.lua" "$legacy_tmp/lua-command"
+[[ ! -s $legacy_tmp/lua-warning ]]
+[[ $(<"$legacy_tmp/config/hypr/hyprland-xr.lua") == "lua customization" ]]
+
+rg -Fq 'require("hyprland")' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
+rg -Fq 'openxr = {' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
+rg -Fq 'hl.on("hyprland.start"' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
 
 echo "Package-wave checks passed"

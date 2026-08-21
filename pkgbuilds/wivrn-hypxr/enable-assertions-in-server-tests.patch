@@ -1,0 +1,11 @@
+diff --git a/server/CMakeLists.txt b/server/CMakeLists.txt
+index 6d0ad6dc..73663bdd 100644
+--- a/server/CMakeLists.txt
++++ b/server/CMakeLists.txt
+@@ -366 +366,6 @@ if (WIVRN_BUILD_TEST)
++	# Like the assertion-based common tests, these must retain assert() in
++	# release-flavoured builds.
++	foreach(target transfer-pacer take-bundle)
++		target_compile_options(${target} PRIVATE -UNDEBUG)
++	endforeach()
+ endif()

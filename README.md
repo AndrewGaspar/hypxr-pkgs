@@ -44,12 +44,17 @@ The initial repository is x86_64-only except for architecture-independent
 keyring, model, and metadata packages. Do not publish aarch64 artifacts until
 the native code and runtime behavior have been tested there.
 
+The complete stack also includes `hypxrcompose`, the headless offline
+compositor for validating, synthesizing, and rendering `.hypxrtake` captures.
+The `hypxrland-legacy-config` name remains temporarily as an empty upgrade
+transition package; new `hypxrland-omarchy` installations do not depend on it.
+
 ## Local builds
 
 Docker is the only build-time host requirement:
 
 ```bash
-bin/repo build --package hypxrpaper hypxrva hypxrhud hypxrvoice-model-base-en
+bin/repo build --package hypxrpaper hypxrva hypxrhud hypxrcompose hypxrvoice-model-base-en
 ```
 
 The command produces unsigned packages in `build-output/edge/x86_64`. It needs

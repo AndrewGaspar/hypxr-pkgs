@@ -1,6 +1,6 @@
 pkgname=hypxr-keyring
 pkgver=20260820
-pkgrel=1
+pkgrel=2
 pkgdesc='HypXR package repository signing keys'
 arch=('any')
 url='https://github.com/AndrewGaspar/hypxr-pkgs'

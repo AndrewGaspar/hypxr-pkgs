@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrhud
-pkgver=0.20260714.1.g4799bc427
+pkgver=0.20260816.1.gf96d0e794
 pkgrel=1
 pkgdesc='Shared OpenXR HUD daemon for HypXRland'
 arch=('x86_64')
@@ -14,6 +14,7 @@ depends=(
   'jansson'
   'libdrm'
   'libglvnd'
+  'libxkbcommon'
   'mesa'
   'openxr'
   'systemd-libs'
@@ -24,11 +25,12 @@ makedepends=(
   'ninja'
   'pkgconf'
 )
+optdepends=('showmethekey: keystroke overlay backend')
 options=('!debug')
 
-_commit=4799bc42721f11fca9b02fcad004062087c31947
+_commit=f96d0e794f9cfc3505b9f671920fd091effbc7f5
 source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
-sha256sums=('ebaf5a414c584668988e72dc22ecb3686a1a32575db9d35024ae3f553b44011e')
+sha256sums=('6833e85f82e86f21cd86d33e8d2e41ab40ac205fc03aa58626619f48ec4508b5')
 
 build() {
   cmake -S "$pkgname-$_commit" -B build -G Ninja \
@@ -50,6 +52,12 @@ package() {
     "$pkgdir/usr/share/doc/$pkgname/README.md"
   install -Dm644 "$pkgname-$_commit/examples/battery.toml" \
     "$pkgdir/usr/share/doc/$pkgname/battery.toml"
+  install -Dm644 "$pkgname-$_commit/docs/keys-overlay.md" \
+    "$pkgdir/usr/share/doc/$pkgname/docs/keys-overlay.md"
+  install -Dm644 "$pkgname-$_commit/docs/cmd-ticker.md" \
+    "$pkgdir/usr/share/doc/$pkgname/docs/cmd-ticker.md"
+  install -Dm644 "$pkgname-$_commit/docs/battery-wivrn.md" \
+    "$pkgdir/usr/share/doc/$pkgname/docs/battery-wivrn.md"
   install -Dm644 "$pkgname-$_commit/third_party/fonts/LiberationMono-OFL.txt" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE.OFL-1.1"
   install -Dm644 "$pkgname-$_commit/third_party/stb_image_write.h" \

@@ -2,7 +2,7 @@
 
 pkgname=hypxrpaper
 pkgver=0.20260704.1.g5cae848cd
-pkgrel=1
+pkgrel=2
 pkgdesc='Ambient panorama and scene client for OpenXR'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/hypxrpaper'

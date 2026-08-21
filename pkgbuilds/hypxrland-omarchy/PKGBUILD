@@ -1,16 +1,15 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrland-omarchy
-pkgver=1.0.0
-pkgrel=3
+pkgver=1.1.0
+pkgrel=1
 pkgdesc='Omarchy XR session installed beside the stable Omarchy session'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
 license=('MIT')
 depends=(
   'hypxrland-stack'
-  'hypxrland-legacy-config'
-  'omarchy>=4.0.0rc3'
+  'omarchy>=4.0.0'
   'omarchy<4.1'
 )
 makedepends=('desktop-file-utils')
@@ -18,14 +17,14 @@ source=(
   'omarchy-xr.desktop'
   'omarchy-xr-session'
   'omarchy-setup-hypxrland'
-  'hyprland-xr.conf'
+  'hyprland-xr.lua'
   'LICENSE'
 )
 sha256sums=(
   'cc75fe4c50416b9697f71970a691cb08ae9854d45515b8a5076b388d490d6e10'
-  '676b635fe32f917c5a531b7f5ba3bedbe5bc2a2334b9b2a998cccdb3c5a19214'
-  '789baf2f660584b66e4062b768afa16db41757d57540eaf5cd9cdf86d9723544'
-  'f38fda5722f7346d4ff4f4dbffe1d4a92343a720b6f7c981e7a4a75bade6e073'
+  '6b866ffa1586ce70a0c46de0b724fa4e6b69f9b3f5024800e545b802ec043f60'
+  '9740907c9bfe613e8271dc48840c77218cfa0ccdfaca062910ac3b2bbd133908'
+  '65fb0fb1159451aa6634dca1852768c8c8315c27cf04681f18e3bd280154e2a9'
   '74d049fa7a0860aa2985a167b21c407e49c70eebf665813be444a7da2a16f0fe'
 )
 
@@ -33,8 +32,9 @@ check() {
   bash -n omarchy-xr-session
   bash -n omarchy-setup-hypxrland
   desktop-file-validate omarchy-xr.desktop
-  grep -Fq 'source = /usr/share/omarchy/default/hypr/autostart.conf' hyprland-xr.conf
-  grep -Fq 'openxr {' hyprland-xr.conf
+  grep -Fq 'require("hyprland")' hyprland-xr.lua
+  grep -Fq 'openxr = {' hyprland-xr.lua
+  grep -Fq 'hl.on("hyprland.start"' hyprland-xr.lua
 }
 
 package() {
@@ -44,7 +44,7 @@ package() {
     "$pkgdir/usr/bin/omarchy-xr-session"
   install -Dm755 omarchy-setup-hypxrland \
     "$pkgdir/usr/bin/omarchy-setup-hypxrland"
-  install -Dm644 hyprland-xr.conf \
-    "$pkgdir/usr/share/hypxrland/omarchy/hyprland-xr.conf"
+  install -Dm644 hyprland-xr.lua \
+    "$pkgdir/usr/share/hypxrland/omarchy/hyprland-xr.lua"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

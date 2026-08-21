@@ -143,6 +143,7 @@ DOCKER_ARGS=(
   -e ARCH="$ARCH"
   -e MIRROR="$MIRROR"
   -e PACKAGES="$PACKAGES"
+  -e TMPDIR=/var/tmp
   -v "$BUILD_ROOT/build-output:/build-output"
   -v "$BUILD_ROOT/repository:/repository"
   -v "$BUILD_DIR:/build:ro"

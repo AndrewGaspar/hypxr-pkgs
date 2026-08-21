@@ -1,28 +1,31 @@
 # Maintainer: Andrew Gaspar
 
-pkgname=hypxrva
-pkgver=0.20260803.1.gbba2c5f8b
-pkgrel=2
-pkgdesc='Dynamic VA-API decode gate for HypXRland'
+pkgname=hypxrcompose
+pkgver=0.20260820.1.gf75ccd4ec
+pkgrel=1
+pkgdesc='Offline compositor for HypXRland full-fidelity XR captures'
 arch=('x86_64')
-url='https://github.com/AndrewGaspar/hypxrva'
+url='https://github.com/AndrewGaspar/hypxrcompose'
 license=('BSD-3-Clause')
 depends=(
+  'ffmpeg'
+  'gcc-libs'
   'glibc'
-  'libdrm'
-  'libva'
+  'libglvnd'
 )
 makedepends=(
   'cmake'
   'gcc'
+  'gtest'
   'ninja'
+  'nlohmann-json'
   'pkgconf'
 )
 options=('!debug')
 
-_commit=bba2c5f8b733eaab347e11460a25df8f62e53866
+_commit=f75ccd4ec60a898c50f4f7ceaedba574225ef3f4
 source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
-sha256sums=('d833d27962c7a13ce3ff636fd5a5d36cb3b2870adb00fef5aa6365361eace568')
+sha256sums=('205a3aeffc5a2f697713146276ea43677916adb3637c36b5383d566884f842b7')
 
 build() {
   cmake -S "$pkgname-$_commit" -B build -G Ninja \
@@ -33,7 +36,7 @@ build() {
 }
 
 check() {
-  HYPXRVA_GPU_TESTS=0 ctest --test-dir build --output-on-failure
+  ctest --test-dir build --output-on-failure
 }
 
 package() {
@@ -43,4 +46,6 @@ package() {
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 "$pkgname-$_commit/README.md" \
     "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 "$pkgname-$_commit/NEXT-STEPS.md" \
+    "$pkgdir/usr/share/doc/$pkgname/NEXT-STEPS.md"
 }

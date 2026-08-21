@@ -49,6 +49,9 @@ jobs:
           mapfile -t packages < <(packages_for_mirror "$MIRROR")
           bin/repo build --mirror "$MIRROR" --arch "$ARCH" --package "${packages[@]}"
 
+      - name: Verify legacy config transition
+        run: test/legacy-transition-upgrade-test.sh
+
       - name: Create release manifest
         run: |
           mkdir -p release/packages
