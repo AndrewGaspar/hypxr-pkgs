@@ -2,10 +2,7 @@ diff --git a/server/CMakeLists.txt b/server/CMakeLists.txt
 index 6d0ad6dc..73663bdd 100644
 --- a/server/CMakeLists.txt
 +++ b/server/CMakeLists.txt
-@@ -363,4 +363,10 @@ if (WIVRN_BUILD_TEST)
- 	target_compile_features(take-bundle PRIVATE cxx_std_20)
- 	target_include_directories(take-bundle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../common)
-+
+@@ -366 +366,6 @@ if (WIVRN_BUILD_TEST)
 +	# Like the assertion-based common tests, these must retain assert() in
 +	# release-flavoured builds.
 +	foreach(target transfer-pacer take-bundle)
