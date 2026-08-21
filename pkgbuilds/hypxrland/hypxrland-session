@@ -2,10 +2,17 @@
 
 set -euo pipefail
 
-config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland-xr.conf"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+lua_config="$config_dir/hyprland-xr.lua"
+legacy_config="$config_dir/hyprland-xr.conf"
 
-if [[ ! -r $config ]]; then
-  echo "hypxrland-session: XR configuration is not readable: $config" >&2
+if [[ -r $lua_config ]]; then
+  config=$lua_config
+elif [[ ! -e $lua_config && ! -L $lua_config && -r $legacy_config ]]; then
+  config=$legacy_config
+  echo "hypxrland-session: legacy hyprland-xr.conf is deprecated; migrate it to hyprland-xr.lua" >&2
+else
+  echo "hypxrland-session: XR configuration is not readable: $lua_config" >&2
   echo "Run omarchy-setup-hypxrland or create the file before starting the XR session." >&2
   exit 1
 fi

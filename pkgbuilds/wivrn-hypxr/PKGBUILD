@@ -1,11 +1,12 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=wivrn-hypxr
-pkgver=26.6.2.20260803.1.gd5cb02968
+pkgver=26.6.2.20260820.1.g3729c7b31
 pkgrel=1
 _upstream_version=26.6.2
 _wivrn_compat=26.6.2-1
-_commit=d5cb02968d9e464c40ab6377fcee4f70aeb469af
+# Tracks the upstream hypxr branch; the source remains pinned to its resolved tip.
+_commit=3729c7b3106c66a69b88d812ebd6eba9c4fe4744
 _monado_commit=1b526bb3a0ff326ecd05af4c2c541407f53c6d4b
 pkgdesc='HypXRland-patched WiVRn OpenXR streaming server'
 arch=('x86_64')
@@ -20,7 +21,7 @@ license=(
 )
 depends=(
   'avahi'
-  'boost-libs'
+  'libboost_iostreams.so'
   'cairo'
   'ffmpeg'
   'gcc-libs'
@@ -55,6 +56,7 @@ makedepends=(
   'patch'
   'pkgconf'
   'spirv-tools'
+  'spdlog'
   'vulkan-headers'
 )
 provides=(
@@ -68,15 +70,19 @@ source=(
   "wivrn-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
   "monado-$_monado_commit.tar.gz::https://gitlab.freedesktop.org/monado/monado/-/archive/$_monado_commit/monado-$_monado_commit.tar.gz"
   'LICENSE.Apache-2.0-LLVM-exception::https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-22.1.0/LICENSE.TXT'
+  'enable-assertions-in-server-tests.patch'
 )
 sha256sums=(
-  '012a9e763d8855ab40ced7e08543a6d9aeb5b704839bf5fb449c525aa055af2a'
+  '56ed5882c33f2f4b9fcba19e1a5afcabba23f785e169656ac5db15d717044a33'
   'a1af1810262d54987bd68c8b74516c39eadb37a5aa850911614fca824c8d8c94'
   '8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee'
+  '042d77a9e415c324ad590f1a69ca6cba6509f2ef2d8b0731e3fea605b85d1b81'
 )
 
 prepare() {
   local patch_file
+
+  patch -d "WiVRn-$_commit" -p1 --forward < enable-assertions-in-server-tests.patch
 
   for patch_file in "WiVRn-$_commit"/patches/monado/*.patch; do
     patch -d "monado-$_monado_commit" -p1 --forward < "$patch_file"
@@ -88,6 +94,7 @@ build() {
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DFETCHCONTENT_SOURCE_DIR_MONADO="$srcdir/monado-$_monado_commit" \
+    -DFETCHCONTENT_TRY_FIND_PACKAGE_MODE=ALWAYS \
     -DGIT_DESC="v$_upstream_version" \
     -DGIT_COMMIT="$_commit" \
     -DWIVRN_BUILD_CLIENT=OFF \
@@ -95,7 +102,7 @@ build() {
     -DWIVRN_BUILD_DISSECTOR=OFF \
     -DWIVRN_BUILD_SERVER=ON \
     -DWIVRN_BUILD_SERVER_LIBRARY=ON \
-    -DWIVRN_BUILD_TEST=OFF \
+    -DWIVRN_BUILD_TEST=ON \
     -DWIVRN_BUILD_WIVRNCTL=ON \
     -DWIVRN_OPENXR_MANIFEST_TYPE=relative \
     -DWIVRN_USE_NVENC=ON \
@@ -110,8 +117,41 @@ build() {
 }
 
 check() {
-  test -x build/server/wivrn-server
-  test -x build/server/wivrnctl
+  local assertion_test
+  local compile_command
+  local test_binary
+  local -a compile_commands
+  local assertion_tests=(
+    transfer-pacer
+    take-bundle
+  )
+  local test_binaries=(
+    build/common/recorder-packets
+    build/common/recorder-names
+    build/common/recorder-transfer
+    build/common/take-wav
+    build/server/transfer-pacer
+    build/server/fov-watch
+    build/server/take-bundle
+  )
+
+  for assertion_test in "${assertion_tests[@]}"; do
+    mapfile -t compile_commands < <(
+      ninja -C build -t commands "$assertion_test" | grep ' -c '
+    )
+    (( ${#compile_commands[@]} > 0 ))
+    for compile_command in "${compile_commands[@]}"; do
+      [[ $compile_command =~ -DNDEBUG.*-UNDEBUG ]]
+    done
+    printf '%s: verified -DNDEBUG is overridden by -UNDEBUG in %d compile command(s)\n' \
+      "$assertion_test" "${#compile_commands[@]}"
+  done
+
+  for test_binary in "${test_binaries[@]}"; do
+    "$test_binary"
+  done
+
+  (( ${#test_binaries[@]} == 7 ))
 }
 
 package() {

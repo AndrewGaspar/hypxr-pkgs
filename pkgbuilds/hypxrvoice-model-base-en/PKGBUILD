@@ -2,14 +2,14 @@
 
 pkgname=hypxrvoice-model-base-en
 pkgver=1.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Whisper base.en speech model for HypXRVoice'
 arch=('any')
 url='https://github.com/openai/whisper'
 license=('MIT')
 
 source=(
-  'ggml-base.en.bin::https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin'
+  'ggml-base.en.bin::https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.en.bin'
   'LICENSE.whisper::https://raw.githubusercontent.com/openai/whisper/5f86d1d86363843179951550570367b37c5d6f78/LICENSE'
 )
 sha256sums=(
