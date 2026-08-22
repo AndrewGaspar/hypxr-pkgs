@@ -52,8 +52,11 @@ bash -n "$work/install-hypxr.sh"
 grep -Fq "EXPECTED_PRIMARY_FINGERPRINT='$primary_fingerprint'" "$work/install-hypxr.sh"
 grep -Fq 'SigLevel = PackageRequired DatabaseRequired TrustedOnly' "$work/install-hypxr.sh"
 grep -Fq 'Server = $REPO_BASE/$CHANNEL/\$arch' "$work/install-hypxr.sh"
-grep -Fq 'pacman --config "$work/pacman.conf" -Syu --noconfirm --needed hypxr-keyring' \
+grep -Fq 'pacman --config "$work/pacman.conf" -Sy --noconfirm --needed hypxr-keyring' \
   "$work/install-hypxr.sh"
+! grep -Eq 'pacman .* -Syu|sudo pacman -Syu' "$work/install-hypxr.sh"
+grep -Fq "echo '  omarchy update'" "$work/install-hypxr.sh"
+grep -Fq "echo '  omarchy pkg add hypxrland-omarchy'" "$work/install-hypxr.sh"
 
 if "$ROOT/bin/render-bootstrap" \
   --public-key "$work/public.asc" \

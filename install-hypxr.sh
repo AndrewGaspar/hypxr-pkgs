@@ -61,8 +61,11 @@ SigLevel = PackageRequired DatabaseRequired TrustedOnly
 Server = $REPO_BASE/$CHANNEL/\$arch
 REPOSITORY
 
-pacman --config "$work/pacman.conf" -Syu --noconfirm --needed hypxr-keyring
+# Enroll only the dependency-free keyring here. A full system upgrade belongs
+# to Omarchy's guarded update flow, which handles snapshots and migrations.
+pacman --config "$work/pacman.conf" -Sy --noconfirm --needed hypxr-keyring
 install -m 0644 "$work/pacman.conf" /etc/pacman.conf
 
 echo 'HypXR repository enabled. Install the XR session with:'
-echo '  sudo pacman -Syu hypxrland-omarchy'
+echo '  omarchy update'
+echo '  omarchy pkg add hypxrland-omarchy'
