@@ -203,7 +203,8 @@ enable the signed repository and install the HypXR stack with:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/AndrewGaspar/hypxr-pkgs/master/install-hypxr.sh | sudo bash
-sudo pacman -Syu hypxrland-omarchy
+omarchy update
+omarchy pkg add hypxrland-omarchy
 ```
 
 Test the XR hardware after installation, then log out and confirm that the
