@@ -54,8 +54,10 @@ printf '%s\n' 'custom legacy config' >"$config_dir/hyprland-xr.conf"
 chown builder:builder "$config_dir/hyprland-xr.conf"
 legacy_sum=$(sha256sum "$config_dir/hyprland-xr.conf" | cut -d' ' -f1)
 
+candidate_version=$(bsdtar -xOqf "$candidate" .PKGINFO | awk -F' = ' '$1 == "pkgver" { print $2; exit }')
+[[ $candidate_version == 4.0.0-* ]]
 pacman -Udd --noconfirm "$candidate"
-[[ $(pacman -Q hypxrland-legacy-config) == "hypxrland-legacy-config 4.0.0-1" ]]
+[[ $(pacman -Q hypxrland-legacy-config) == "hypxrland-legacy-config $candidate_version" ]]
 [[ ! -e /usr/share/omarchy/default/hypr/envs.conf ]]
 if [[ -d /usr/share/omarchy/default/hypr ]]; then
   ! find /usr/share/omarchy/default/hypr -type f -name '*.conf' -print -quit | grep -q .

@@ -2,7 +2,7 @@
 
 pkgname=hypxrland
 pkgver=0.56.2.r374.g67200a838
-pkgrel=1
+pkgrel=2
 pkgdesc='Hyprland-based spatial OpenXR compositor installed beside stable Hyprland'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/Hyprland'

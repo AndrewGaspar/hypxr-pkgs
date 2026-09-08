@@ -2,20 +2,20 @@
 
 pkgname=hypxrland-stack
 pkgver=1.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Complete HypXRland runtime stack for Arch Linux'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
 license=('MIT')
 depends=(
-  'hypxrland>=0.56.2.r374.g67200a838-1'
-  'hypxrcompose>=0.20260820.1.gf75ccd4ec-1'
-  'hypxrhud>=0.20260816.1.gf96d0e794-1'
-  'hypxrpaper>=0.20260704.1.g5cae848cd-2'
-  'hypxrva>=0.20260803.1.gbba2c5f8b-2'
-  'hypxrvoice>=0.20260812.1.g7ce7d33b2-1'
-  'hypxrvoice-model-base-en>=1.0.0-2'
-  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-1'
+  'hypxrland>=0.56.2.r374.g67200a838-2'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-2'
+  'hypxrhud>=0.20260816.1.gf96d0e794-2'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-3'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-3'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-2'
+  'hypxrvoice-model-base-en>=1.0.0-3'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-2'
 )
 optdepends=('monado-xreal: private OpenXR runtime for XREAL Air headsets')
 source=('README.md' 'LICENSE')

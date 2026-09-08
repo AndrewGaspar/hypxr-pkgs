@@ -2,7 +2,7 @@
 
 pkgname=hypxrcompose
 pkgver=0.20260820.1.gf75ccd4ec
-pkgrel=1
+pkgrel=2
 pkgdesc='Offline compositor for HypXRland full-fidelity XR captures'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/hypxrcompose'
