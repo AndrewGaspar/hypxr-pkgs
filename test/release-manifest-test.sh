@@ -8,9 +8,11 @@ trap 'rm -rf "$work"' EXIT
 
 mkdir -p "$work/packages" "$work/pkgroot"
 
+package_count=0
 for package in "$ROOT"/pkgbuilds/*; do
   [[ -f $package/PKGBUILD ]] || continue
   name=${package##*/}
+  package_count=$((package_count + 1))
   mkdir -p "$work/pkgroot/$name"
   printf '%s\n' \
     "pkgname = $name" \
@@ -32,11 +34,12 @@ done
   --mirror edge \
   --arch x86_64
 
-jq -e '
+(( package_count == 14 ))
+jq -e --argjson count "$package_count" '
   .schema == 1 and
   .repository == "AndrewGaspar/hypxr-pkgs" and
   .source_commit == "0123456789abcdef0123456789abcdef01234567" and
-  (.packages | length) == 13 and
+  (.packages | length) == $count and
   all(.packages[]; (.sha256 | test("^[0-9a-f]{64}$")) and .bytes > 0)
 ' "$work/release-manifest.json" >/dev/null
 
