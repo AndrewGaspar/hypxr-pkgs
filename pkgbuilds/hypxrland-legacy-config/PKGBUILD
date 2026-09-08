@@ -2,7 +2,7 @@
 
 pkgname=hypxrland-legacy-config
 pkgver=4.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Transition package removing obsolete HypXRland Omarchy 3 defaults'
 arch=('any')
 url='https://github.com/AndrewGaspar/hypxr-pkgs'

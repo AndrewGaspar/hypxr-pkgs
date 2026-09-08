@@ -2,7 +2,7 @@
 
 pkgname=wivrn-hypxr
 pkgver=26.6.2.20260820.1.g3729c7b31
-pkgrel=1
+pkgrel=2
 _upstream_version=26.6.2
 _wivrn_compat=26.6.2-1
 # Tracks the upstream hypxr branch; the source remains pinned to its resolved tip.

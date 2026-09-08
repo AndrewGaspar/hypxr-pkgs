@@ -2,7 +2,7 @@
 
 pkgname=hypxrhud
 pkgver=0.20260816.1.gf96d0e794
-pkgrel=1
+pkgrel=2
 pkgdesc='Shared OpenXR HUD daemon for HypXRland'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/hypxrhud'

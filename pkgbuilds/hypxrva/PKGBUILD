@@ -2,7 +2,7 @@
 
 pkgname=hypxrva
 pkgver=0.20260803.1.gbba2c5f8b
-pkgrel=2
+pkgrel=3
 pkgdesc='Dynamic VA-API decode gate for HypXRland'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/hypxrva'

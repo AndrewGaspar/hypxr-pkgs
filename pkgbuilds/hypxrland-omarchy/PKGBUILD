@@ -2,7 +2,7 @@
 
 pkgname=hypxrland-omarchy
 pkgver=1.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Omarchy XR session installed beside the stable Omarchy session'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'

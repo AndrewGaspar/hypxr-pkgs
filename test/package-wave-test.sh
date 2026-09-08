@@ -91,27 +91,39 @@ rg -q '/usr/share/hypxrvoice/models/ggml-base\.en\.bin' \
 rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
   pkgbuilds/hypxrvoice-model-base-en/PKGBUILD
 
-declare -A collision_pkgrel=(
-  [hypxr-keyring]=2
-  [hypxrpaper]=2
-  [hypxrva]=2
-  [hypxrvoice-model-base-en]=2
-  [monado-xreal]=2
+# Every publish rebuilds the complete edge wave, and published filenames are
+# immutable, so each release must carry a pkgrel no earlier release used.
+# The aquamarine 0.15.0 (libaquamarine.so=14) rebuild of hypxrland re-versioned
+# the whole wave for that reason.
+declare -A expected_pkgrel=(
+  [hypxr-keyring]=3
+  [hypxrcompose]=2
+  [hypxrhud]=2
+  [hypxrland]=2
+  [hypxrland-legacy-config]=2
+  [hypxrland-omarchy]=2
+  [hypxrland-stack]=2
+  [hypxrpaper]=3
+  [hypxrva]=3
+  [hypxrvoice]=2
+  [hypxrvoice-model-base-en]=3
+  [monado-xreal]=3
+  [wivrn-hypxr]=2
 )
-for package in "${!collision_pkgrel[@]}"; do
+for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
-  [[ $actual_pkgrel == "${collision_pkgrel[$package]}" ]]
+  [[ $actual_pkgrel == "${expected_pkgrel[$package]}" ]]
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r374.g67200a838-1'
-  'hypxrcompose>=0.20260820.1.gf75ccd4ec-1'
-  'hypxrhud>=0.20260816.1.gf96d0e794-1'
-  'hypxrpaper>=0.20260704.1.g5cae848cd-2'
-  'hypxrva>=0.20260803.1.gbba2c5f8b-2'
-  'hypxrvoice>=0.20260812.1.g7ce7d33b2-1'
-  'hypxrvoice-model-base-en>=1.0.0-2'
-  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-1'
+  'hypxrland>=0.56.2.r374.g67200a838-2'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-2'
+  'hypxrhud>=0.20260816.1.gf96d0e794-2'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-3'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-3'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-2'
+  'hypxrvoice-model-base-en>=1.0.0-3'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-2'
 )
 mapfile -t actual_stack_deps < <(
   cd pkgbuilds/hypxrland-stack
@@ -126,7 +138,7 @@ for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
 done
 
 legacy_package=pkgbuilds/hypxrland-legacy-config
-[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-1" ]]
+[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-2" ]]
 mapfile -t legacy_dependencies < <(
   cd "$legacy_package"
   bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'

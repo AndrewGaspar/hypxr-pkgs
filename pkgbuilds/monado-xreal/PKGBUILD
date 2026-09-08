@@ -2,7 +2,7 @@
 
 pkgname=monado-xreal
 pkgver=25.1.0.20260719.1.g3752d437c
-pkgrel=2
+pkgrel=3
 pkgdesc='HypXRland Monado runtime for XREAL Air displays'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/monado'
