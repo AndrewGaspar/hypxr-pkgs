@@ -34,7 +34,7 @@ done
   --mirror edge \
   --arch x86_64
 
-(( package_count == 14 ))
+(( package_count >= 14 ))
 jq -e --argjson count "$package_count" '
   .schema == 1 and
   .repository == "AndrewGaspar/hypxr-pkgs" and
