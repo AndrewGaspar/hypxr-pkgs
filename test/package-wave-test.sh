@@ -6,6 +6,7 @@ ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
 cd "$ROOT"
 
 packages=(
+  hyprpad
   hypxrhud
   hypxrcompose
   hypxr-keyring
@@ -48,6 +49,7 @@ for package in \
 done
 
 for package in \
+  hyprpad \
   hypxrhud \
   hypxrcompose \
   hypxrland \
@@ -96,6 +98,7 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 # The aquamarine 0.15.0 (libaquamarine.so=14) rebuild of hypxrland re-versioned
 # the whole wave for that reason.
 declare -A expected_pkgrel=(
+  [hyprpad]=1
   [hypxr-keyring]=3
   [hypxrcompose]=2
   [hypxrhud]=2
@@ -133,6 +136,24 @@ mapfile -t actual_stack_deps < <(
 
 rg -q '/usr/share/hypxrland/mpv/mpv-hypxr-stereo\.lua' \
   pkgbuilds/hypxrland/PKGBUILD pkgbuilds/hypxrland/README.package.md
+
+# hyprpad ships upstream's host integration under the package-owned paths and
+# rewrites the checkout-relative paths its units and scripts carry.
+hyprpad_package=pkgbuilds/hyprpad/PKGBUILD
+rg -q "'wayland'" "$hyprpad_package"
+rg -q -- '--frozen --release' "$hyprpad_package"
+rg -q '/usr/lib/sysusers\.d/hyprpad\.conf' "$hyprpad_package"
+rg -q '/usr/lib/udev/rules\.d/72-hyprpad-puck\.rules' "$hyprpad_package"
+rg -q '/usr/lib/systemd/user/hyprpad\.service' "$hyprpad_package"
+rg -q 'hyprpad-broker\.socket packaged/systemd/hyprpad-broker\.service' "$hyprpad_package"
+rg -q 'packaged/systemd/user/hyprpad\.service' "$hyprpad_package"
+! rg -q 'sed -i' "$hyprpad_package"
+rg -Fq 'ExecStart=/usr/bin/hyprpad broker' "$hyprpad_package"
+rg -Fq 'Environment=HYPRPAD_OSK_BIN=/usr/bin/hyprpad-osk' "$hyprpad_package"
+rg -Fq 'DEFAULT_SRC="/usr/share/hyprpad/shell/$PLUGIN_ID"' "$hyprpad_package"
+rg -Fq 'file:///usr/share/doc/hyprpad/12-lizard-free.md' "$hyprpad_package"
+rg -Fq 'usermod -aG hyprpad' pkgbuilds/hyprpad/README.package.md
+rg -Fq 'hyprpad-broker.socket' pkgbuilds/hyprpad/README.package.md
 for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
   rg -Fq "$hud_doc" pkgbuilds/hypxrhud/PKGBUILD
 done

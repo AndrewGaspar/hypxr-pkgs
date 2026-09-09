@@ -1,0 +1,144 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=hyprpad
+pkgver=0.20260907.1.g9657c9551
+pkgrel=1
+pkgdesc='Drive Hyprland from a Steam Controller or gamepad without giving up Steam Input'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/hyprpad'
+license=(
+  'MIT OR Apache-2.0'
+  'CC0-1.0'
+)
+# libwayland-client is dlopen'ed, so it never appears in the ELF NEEDED list
+# and has to be named here by hand. Lua 5.4 is vendored and built from source.
+depends=(
+  'gcc-libs'
+  'glibc'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+)
+optdepends=(
+  'bubblewrap: launch Steam with the real controller masked (hyprpad-steam)'
+  'steam: the client the masked launcher wraps'
+  'omarchy: cheat-sheet panel and bar widget for the Omarchy shell'
+)
+# Cargo applies its own LTO (both crates set lto = true); keep makepkg's
+# gcc-side -flto out of the vendored Lua objects it links against.
+options=('!debug' '!lto')
+
+_commit=9657c955199018d37fb145396f13fcc9fa2cc139
+source=(
+  "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
+  'README.package.md'
+)
+sha256sums=(
+  '4a4bd6c52d4e7cc2faf0ee87ca0840013fa2f5332bce8786e638174bf43572bf'
+  '3600d02931a246a642cd643e8af09d5b8446b330a52ea11467425f0476937ce2'
+)
+
+prepare() {
+  cd "$pkgname-$_commit"
+
+  # Upstream's units and helper scripts are written for a checkout that is
+  # symlinked into ~/.local/bin. The test suite embeds those files and asserts
+  # on exactly those paths, so leave the tree alone and rewrite copies under
+  # packaged/ for installation.
+  mkdir -p packaged/systemd/user packaged/bin
+  sed 's|^ExecStart=.*/hyprpad broker$|ExecStart=/usr/bin/hyprpad broker|' \
+    packaging/systemd/hyprpad-broker.service >packaged/systemd/hyprpad-broker.service
+  sed 's|%h/\.local/bin/hyprpad|/usr/bin/hyprpad|g' \
+    packaging/systemd/user/hyprpad.service >packaged/systemd/user/hyprpad.service
+  local script
+  for script in hyprpad-cheatsheet hyprpad-statusbar; do
+    sed 's|^DEFAULT_SRC=.*$|DEFAULT_SRC="/usr/share/hyprpad/shell/$PLUGIN_ID"|' \
+      "scripts/$script" >"packaged/bin/$script"
+  done
+
+  export RUSTUP_TOOLCHAIN=stable
+  local target
+  target=$(rustc -vV | sed -n 's/host: //p')
+  cargo fetch --locked --target "$target"
+  cargo fetch --locked --target "$target" --manifest-path osk/Cargo.toml
+}
+
+build() {
+  cd "$pkgname-$_commit"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build --frozen --release
+  cargo build --frozen --release --manifest-path osk/Cargo.toml
+}
+
+check() {
+  cd "$pkgname-$_commit"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo test --frozen --release
+  cargo test --frozen --release --manifest-path osk/Cargo.toml
+
+  bash -n scripts/hyprpad-steam packaged/bin/hyprpad-cheatsheet packaged/bin/hyprpad-statusbar
+  # No subcommand prints usage on stderr and exits 2 by design.
+  { target/release/hyprpad 2>&1 || true; } | grep -F 'usage: hyprpad'
+  target/release/hyprpad-osk --help | grep -F 'hyprpad-osk'
+  ! ldd target/release/hyprpad | grep -F 'not found'
+  ! ldd target/release/hyprpad-osk | grep -F 'not found'
+
+  grep -Fxq 'ExecStart=/usr/bin/hyprpad broker' packaged/systemd/hyprpad-broker.service
+  grep -Fxq 'ExecStart=/usr/bin/hyprpad run' packaged/systemd/user/hyprpad.service
+  grep -Fxq 'ExecReload=/usr/bin/hyprpad reload' packaged/systemd/user/hyprpad.service
+  grep -Fxq 'Environment=HYPRPAD_OSK_BIN=/usr/bin/hyprpad-osk' packaged/systemd/user/hyprpad.service
+  grep -Fxq 'Documentation=file:///usr/share/doc/hyprpad/12-lizard-free.md' \
+    packaged/systemd/user/hyprpad.service
+  ! grep -E '^[^#]*\.local/bin' packaged/systemd/user/hyprpad.service
+  grep -Fxq 'DEFAULT_SRC="/usr/share/hyprpad/shell/$PLUGIN_ID"' packaged/bin/hyprpad-cheatsheet
+  grep -Fxq 'DEFAULT_SRC="/usr/share/hyprpad/shell/$PLUGIN_ID"' packaged/bin/hyprpad-statusbar
+  if command -v udevadm >/dev/null; then
+    udevadm verify packaging/udev/72-hyprpad-puck.rules
+  fi
+}
+
+package() {
+  cd "$pkgname-$_commit"
+
+  install -Dm755 target/release/hyprpad "$pkgdir/usr/bin/hyprpad"
+  install -Dm755 target/release/hyprpad-osk "$pkgdir/usr/bin/hyprpad-osk"
+  install -Dm755 target/release/hyprpad-osk-build-model \
+    "$pkgdir/usr/bin/hyprpad-osk-build-model"
+  install -Dm755 scripts/hyprpad-steam packaged/bin/hyprpad-cheatsheet packaged/bin/hyprpad-statusbar \
+    -t "$pkgdir/usr/bin"
+
+  install -Dm644 packaging/sysusers.d/hyprpad.conf "$pkgdir/usr/lib/sysusers.d/hyprpad.conf"
+  install -Dm644 packaging/udev/72-hyprpad-puck.rules \
+    "$pkgdir/usr/lib/udev/rules.d/72-hyprpad-puck.rules"
+  install -Dm644 packaging/systemd/hyprpad-broker.socket packaged/systemd/hyprpad-broker.service \
+    -t "$pkgdir/usr/lib/systemd/system"
+  install -Dm644 packaged/systemd/user/hyprpad.service \
+    "$pkgdir/usr/lib/systemd/user/hyprpad.service"
+
+  # Omarchy shell plugins, copied into ~/.config/omarchy/plugins by
+  # `hyprpad-cheatsheet install` and `hyprpad-statusbar install`.
+  local plugin
+  for plugin in hyprpad.cheatsheet hyprpad.status; do
+    (cd "shell/$plugin" && find . -type f -exec \
+      install -Dm644 '{}' "$pkgdir/usr/share/hyprpad/shell/$plugin/{}" \;)
+  done
+
+  install -Dm644 config/hyprpad.lua "$pkgdir/usr/share/doc/$pkgname/hyprpad.lua"
+  install -Dm644 config/hyprpad-rules.lua "$pkgdir/usr/share/doc/$pkgname/hyprpad-rules.lua"
+  install -Dm644 docs/12-lizard-free.md "$pkgdir/usr/share/doc/$pkgname/12-lizard-free.md"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 osk/README.md "$pkgdir/usr/share/doc/$pkgname/README.osk.md"
+  install -Dm644 shell/README.md "$pkgdir/usr/share/doc/$pkgname/README.shell.md"
+  install -Dm644 "$srcdir/README.package.md" "$pkgdir/usr/share/doc/$pkgname/README.package.md"
+
+  install -Dm644 LICENSE-MIT LICENSE-APACHE -t "$pkgdir/usr/share/licenses/$pkgname"
+  install -Dm644 shell/hyprpad.cheatsheet/art/kenney/LICENSE.txt \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.kenney-input-prompts.txt"
+  install -Dm644 shell/hyprpad.cheatsheet/art/LICENSES.md \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSES.cheatsheet-art.md"
+  install -Dm644 shell/hyprpad.status/art/LICENSES.md \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSES.status-art.md"
+}

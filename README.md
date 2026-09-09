@@ -49,6 +49,10 @@ compositor for validating, synthesizing, and rendering `.hypxrtake` captures.
 The `hypxrland-legacy-config` name remains temporarily as an empty upgrade
 transition package; new `hypxrland-omarchy` installations do not depend on it.
 
+`hyprpad`, the Steam Controller daemon for Hyprland, is published from the same
+repository but is not part of `hypxrland-stack`; install it separately with
+`sudo pacman -S hyprpad` and follow `/usr/share/doc/hyprpad/README.package.md`.
+
 ## Local builds
 
 Docker is the only build-time host requirement:
