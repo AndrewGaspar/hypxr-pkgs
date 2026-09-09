@@ -19,6 +19,7 @@ packages=(
   hypxrvoice-model-base-en
   hypxrvoice
   monado-xreal
+  voxtype-hypxr
   wivrn-hypxr
 )
 
@@ -57,6 +58,7 @@ for package in \
   hypxrva \
   hypxrvoice \
   monado-xreal \
+  voxtype-hypxr \
   wivrn-hypxr; do
   [[ $(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "${arch[*]}"') == "x86_64" ]]
 done
@@ -111,6 +113,7 @@ declare -A expected_pkgrel=(
   [hypxrvoice]=2
   [hypxrvoice-model-base-en]=3
   [monado-xreal]=3
+  [voxtype-hypxr]=1
   [wivrn-hypxr]=2
 )
 for package in "${packages[@]}"; do
@@ -154,6 +157,24 @@ rg -Fq 'DEFAULT_SRC="/usr/share/hyprpad/shell/$PLUGIN_ID"' "$hyprpad_package"
 rg -Fq 'file:///usr/share/doc/hyprpad/12-lizard-free.md' "$hyprpad_package"
 rg -Fq 'usermod -aG hyprpad' pkgbuilds/hyprpad/README.package.md
 rg -Fq 'hyprpad-broker.socket' pkgbuilds/hyprpad/README.package.md
+
+# voxtype-hypxr replaces Omarchy's voxtype-bin with a source build of the
+# Muse fork. It must stay a drop-in for the upstream layout and never inherit
+# the build host's CPU features.
+voxtype_package=pkgbuilds/voxtype-hypxr/PKGBUILD
+rg -q "^conflicts=\('voxtype' 'voxtype-bin' 'voxtype-bin-rc'\)" "$voxtype_package"
+rg -q '^provides=\("voxtype=\$_voxtype_compat"\)' "$voxtype_package"
+rg -q "^backup=\('etc/voxtype/config\.toml'\)" "$voxtype_package"
+rg -q '^  export GGML_NATIVE=OFF$' "$voxtype_package"
+rg -q '^  export GGML_AVX512=OFF$' "$voxtype_package"
+rg -q "profile\.release\.lto=false" "$voxtype_package"
+rg -q -- '--lib --bins --tests' "$voxtype_package"
+rg -q 'ln -s /usr/lib/voxtype/voxtype-native "\$pkgdir/usr/bin/voxtype"' "$voxtype_package"
+rg -q '/usr/lib/systemd/user/voxtype\.service' "$voxtype_package"
+rg -q '/usr/share/voxtype/quickshell/' "$voxtype_package"
+! rg -q 'gpu-vulkan|onnx|parakeet|install=' "$voxtype_package"
+rg -Fq 'voxtype setup model' pkgbuilds/voxtype-hypxr/README.package.md
+rg -Fq 'VOXTYPE_MUSE_API_KEY' pkgbuilds/voxtype-hypxr/README.package.md
 for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
   rg -Fq "$hud_doc" pkgbuilds/hypxrhud/PKGBUILD
 done

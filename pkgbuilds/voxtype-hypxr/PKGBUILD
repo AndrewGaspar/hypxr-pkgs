@@ -1,0 +1,186 @@
+# Maintainer: Andrew Gaspar
+
+pkgname=voxtype-hypxr
+pkgver=1.0.1.20260908.1.ga51308e84
+pkgrel=1
+_upstream_version=1.0.1
+_voxtype_compat=1.0.1-1
+pkgdesc='Push-to-talk voice-to-text for Wayland with the Muse streaming engine (HypXR fork)'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/voxtype'
+license=('MIT')
+depends=(
+  'alsa-lib'
+  'curl'
+  'gcc-libs'
+  'glibc'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'cmake'
+  'desktop-file-utils'
+  'gtk4'
+  'gtk4-layer-shell'
+  'pkgconf'
+)
+optdepends=(
+  'wtype: keyboard simulation for Wayland (recommended)'
+  'dotool: keyboard simulation with layout support'
+  'ydotool: keyboard simulation fallback'
+  'wl-clipboard: clipboard support'
+  'libnotify: desktop notifications'
+  'pipewire: audio server (recommended)'
+  'pipewire-alsa: ALSA compatibility for PipeWire'
+  'gtk4: runtime for the GTK4 on-screen mic visualizer'
+  'gtk4-layer-shell: runtime for the GTK4 on-screen mic visualizer'
+  'quickshell: Quickshell OSD frontend'
+  'ollama: local summarization for meeting mode'
+)
+provides=("voxtype=$_voxtype_compat")
+conflicts=('voxtype' 'voxtype-bin' 'voxtype-bin-rc')
+backup=('etc/voxtype/config.toml')
+# The release profile already strips; Cargo's own LTO is disabled below the
+# way upstream's release builds do it, so makepkg's flags must stay out too.
+options=('!debug' '!lto')
+
+# Tracks the fork branch feat/muse-stack-v1.0.1: upstream v1.0.1 plus the
+# Muse Voice Transcribe streaming-engine commits.
+_commit=a51308e849c9ab224457d7e512ecd1b3cb2caf65
+source=(
+  "voxtype-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
+  'README.package.md'
+)
+sha256sums=(
+  'a03eadc90278bc6f118b89f55912aadbb0ea0cafdb41e20ecac043600eac7578'
+  '14151b1c8f24e887dcb780314da9f0511ff3a946cbc0a1b60612ffa5d733d21d'
+)
+
+_cargo_env() {
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+
+  # makepkg's C and linker flags break the vendored whisper.cpp cmake build,
+  # and its RUSTFLAGS are replaced rather than extended. Keep only the path
+  # remapping so binaries carry no $srcdir references.
+  unset RUSTFLAGS DEBUG_RUSTFLAGS CFLAGS CXXFLAGS LDFLAGS
+  export RUSTFLAGS="--remap-path-prefix=$srcdir/voxtype-$_commit/= --remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}/registry/src/=cargo/"
+  export CFLAGS="-ffile-prefix-map=$srcdir/voxtype-$_commit/="
+  export CXXFLAGS="-ffile-prefix-map=$srcdir/voxtype-$_commit/="
+
+  # whisper.cpp fails under newer gcc; upstream and the AUR build it with clang.
+  export CC=clang
+  export CXX=clang++
+
+  # The cmake step inside whisper-rs-sys deadlocks under wide parallelism.
+  export CMAKE_BUILD_PARALLEL_LEVEL=4
+  export MAKEFLAGS='-j4'
+
+  # A repository package must not inherit the build host's CPU. With native
+  # detection off ggml keeps AVX2, FMA, and F16C and leaves AVX-512 off, the
+  # same Haswell-class baseline as upstream's portable binaries.
+  export GGML_NATIVE=OFF
+  export GGML_AVX512=OFF
+  export GGML_AVX_VNNI=OFF
+  export GGML_AVX512_VNNI=OFF
+}
+
+# Upstream disables fat LTO for release builds because the link step hangs.
+_cargo_release=(
+  --frozen --release
+  --config 'profile.release.lto=false'
+  --config 'profile.release.codegen-units=8'
+)
+
+prepare() {
+  cd "voxtype-$_commit"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "voxtype-$_commit"
+  _cargo_env
+
+  # The daemon: CPU Whisper plus the always-on Muse, Soniox, and remote engines.
+  cargo build "${_cargo_release[@]}" --bin voxtype
+  cp target/release/voxtype voxtype-native
+
+  # The OSD launcher, its GTK4 and Quickshell frontends, and the audio bridge.
+  cargo build "${_cargo_release[@]}" --features osd-gtk4 \
+    --bin voxtype-osd \
+    --bin voxtype-osd-gtk4 \
+    --bin voxtype-osd-quickshell \
+    --bin voxtype-audio-bridge
+}
+
+check() {
+  cd "voxtype-$_commit"
+  _cargo_env
+
+  # Examples need ONNX features that are deliberately not enabled.
+  cargo test "${_cargo_release[@]}" --lib --bins --tests
+
+  ./voxtype-native --version | grep -F "$_upstream_version"
+  ./voxtype-native --help | grep -F daemon
+  target/release/voxtype-osd --help >/dev/null
+  local binary
+  for binary in voxtype-native target/release/voxtype-osd target/release/voxtype-osd-gtk4 \
+    target/release/voxtype-osd-quickshell target/release/voxtype-audio-bridge; do
+    ! ldd "$binary" | grep -F 'not found'
+  done
+  ! ldd voxtype-native | grep -F libvulkan
+
+  bash -n packaging/scripts/voxtype-configure-launcher
+  desktop-file-validate packaging/voxtype-configure.desktop
+  grep -Fxq 'ExecStart=/usr/bin/voxtype -q daemon' packaging/systemd/voxtype.service
+  grep -Fxq 'module voxtype-shared' quickshell/voxtype-shared/qmldir
+  grep -q 'primary_only' docs/CONFIGURATION.md
+  [[ -n $(find target/release/build -type d -path '*/voxtype-*/out/man' -print -quit) ]]
+}
+
+package() {
+  cd "voxtype-$_commit"
+
+  # Same layout as voxtype-bin and the AUR source package: variants live in
+  # /usr/lib/voxtype and /usr/bin carries the launcher symlinks.
+  install -Dm755 voxtype-native "$pkgdir/usr/lib/voxtype/voxtype-native"
+  install -Dm755 target/release/voxtype-osd "$pkgdir/usr/lib/voxtype/voxtype-osd"
+  install -Dm755 target/release/voxtype-osd-gtk4 "$pkgdir/usr/lib/voxtype/voxtype-osd-gtk4"
+  install -Dm755 target/release/voxtype-osd-quickshell \
+    "$pkgdir/usr/lib/voxtype/voxtype-osd-quickshell"
+  install -d "$pkgdir/usr/bin"
+  ln -s /usr/lib/voxtype/voxtype-native "$pkgdir/usr/bin/voxtype"
+  ln -s /usr/lib/voxtype/voxtype-osd "$pkgdir/usr/bin/voxtype-osd"
+  install -Dm755 target/release/voxtype-audio-bridge "$pkgdir/usr/bin/voxtype-audio-bridge"
+  install -Dm755 packaging/scripts/voxtype-configure-launcher \
+    "$pkgdir/usr/bin/voxtype-configure-launcher"
+
+  install -Dm644 config/default.toml "$pkgdir/etc/voxtype/config.toml"
+  install -Dm644 packaging/systemd/voxtype.service \
+    "$pkgdir/usr/lib/systemd/user/voxtype.service"
+  install -Dm644 packaging/voxtype-configure.desktop \
+    "$pkgdir/usr/share/applications/voxtype-configure.desktop"
+  install -Dm644 packaging/completions/voxtype.bash \
+    "$pkgdir/usr/share/bash-completion/completions/voxtype"
+  install -Dm644 packaging/completions/voxtype.zsh \
+    "$pkgdir/usr/share/zsh/site-functions/_voxtype"
+  install -Dm644 packaging/completions/voxtype.fish \
+    "$pkgdir/usr/share/fish/vendor_completions.d/voxtype.fish"
+
+  # Quickshell frontend tree, probed at /usr/share/voxtype/quickshell.
+  (cd quickshell && find . -type f -name '*.qml' -o -type f -name qmldir | while read -r file; do
+    install -Dm644 "$file" "$pkgdir/usr/share/voxtype/quickshell/$file"
+  done)
+
+  local man_dir
+  man_dir=$(find target/release/build -type d -path '*/voxtype-*/out/man' -print -quit)
+  install -Dm644 "$man_dir"/*.1 -t "$pkgdir/usr/share/man/man1"
+
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 docs/INSTALL.md "$pkgdir/usr/share/doc/$pkgname/INSTALL.md"
+  install -Dm644 docs/CONFIGURATION.md "$pkgdir/usr/share/doc/$pkgname/CONFIGURATION.md"
+  install -Dm644 quickshell/README.md "$pkgdir/usr/share/doc/$pkgname/README.quickshell.md"
+  install -Dm644 "$srcdir/README.package.md" "$pkgdir/usr/share/doc/$pkgname/README.package.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -53,6 +53,10 @@ transition package; new `hypxrland-omarchy` installations do not depend on it.
 repository but is not part of `hypxrland-stack`; install it separately with
 `sudo pacman -S hyprpad` and follow `/usr/share/doc/hyprpad/README.package.md`.
 
+`voxtype-hypxr` is a source build of the HypXR fork of voxtype with the Muse
+streaming engine. It provides and conflicts with Omarchy's `voxtype-bin`, so
+`sudo pacman -S voxtype-hypxr` replaces the prebuilt package in place.
+
 ## Local builds
 
 Docker is the only build-time host requirement:
