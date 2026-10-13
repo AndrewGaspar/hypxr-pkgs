@@ -104,10 +104,10 @@ declare -A expected_pkgrel=(
   [hypxr-keyring]=3
   [hypxrcompose]=2
   [hypxrhud]=2
-  [hypxrland]=2
+  [hypxrland]=1
   [hypxrland-legacy-config]=2
   [hypxrland-omarchy]=2
-  [hypxrland-stack]=2
+  [hypxrland-stack]=3
   [hypxrpaper]=3
   [hypxrva]=3
   [hypxrvoice]=2
@@ -122,7 +122,7 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r374.g67200a838-2'
+  'hypxrland>=0.56.2.r395.g1d704fc1b-1'
   'hypxrcompose>=0.20260820.1.gf75ccd4ec-2'
   'hypxrhud>=0.20260816.1.gf96d0e794-2'
   'hypxrpaper>=0.20260704.1.g5cae848cd-3'
