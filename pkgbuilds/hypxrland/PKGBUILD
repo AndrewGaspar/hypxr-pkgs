@@ -1,8 +1,8 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrland
-pkgver=0.56.2.r374.g67200a838
-pkgrel=2
+pkgver=0.56.2.r395.g1d704fc1b
+pkgrel=1
 pkgdesc='Hyprland-based spatial OpenXR compositor installed beside stable Hyprland'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/Hyprland'
@@ -93,7 +93,7 @@ makedepends=(
 )
 options=('!debug')
 
-_commit=67200a838356a206c4819595a2f733299ab4da63
+_commit=1d704fc1b1b5d1cd3a0ce011e41f4d7b0e4622e2
 _glaze_commit=b518eec7a22e56ffa238b072c07f47efa7cea97f
 _udis86_commit=5336633af70f3917760a6d441ff02d93477b0c86
 source=(
@@ -103,13 +103,11 @@ source=(
   'hypxrland-session'
   'README.package.md'
 )
-sha256sums=(
-  'e93c5f7eb7b363d9744641e9368de7025700a9e1c5683392e79af7fc03c68954'
-  '0d108903feb443df316fb53eaec2fd6c1c6d96b368562ad830debc5c6c29c304'
-  '2f459fafa19535ef1be417bf7614e4f92475e5787d7ba76df20287cc29d1b5a9'
-  '6ed32e1dc75e5e983964e12bd746cc0e31003d07e193e5b598291b3f8be7cce9'
-  '96b273af40e386a78f29ddf2698ef22e2d309be23e1582869f9ab81a02e49cc7'
-)
+sha256sums=('21af6e78032f84872072c2cbb57ddc34e8f8d4208db2be90beb6088ef4103d5e'
+            '0d108903feb443df316fb53eaec2fd6c1c6d96b368562ad830debc5c6c29c304'
+            '2f459fafa19535ef1be417bf7614e4f92475e5787d7ba76df20287cc29d1b5a9'
+            '6ed32e1dc75e5e983964e12bd746cc0e31003d07e193e5b598291b3f8be7cce9'
+            '96b273af40e386a78f29ddf2698ef22e2d309be23e1582869f9ab81a02e49cc7')
 
 prepare() {
   rm -rf "Hyprland-$_commit/subprojects/udis86"
@@ -117,13 +115,17 @@ prepare() {
 }
 
 build() {
+  # Host builds run inside the hypxr-pkgs checkout: without a ceiling, Hyprland's CMake
+  # `git rev-parse` walks up into THIS repo and stamps its commit into --version
+  # (check() then fails). Docker builds have no parent repo, so this is a no-op there.
+  export GIT_CEILING_DIRECTORIES="$srcdir"
   export GIT_COMMIT_HASH=$_commit
   export GIT_BRANCH=hypxrland
   export GIT_COMMIT_MESSAGE="packaged HypXRland snapshot ${_commit:0:10}"
-  export GIT_COMMIT_DATE=2026-08-21
+  export GIT_COMMIT_DATE=2026-10-11
   export GIT_DIRTY=clean
-  export GIT_TAG="v0.56.2-374-g${_commit:0:10}"
-  export GIT_COMMITS=8035
+  export GIT_TAG="v0.56.2-395-g${_commit:0:10}"
+  export GIT_COMMITS=8056
 
   cmake -S "Hyprland-$_commit" -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
