@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrland
-pkgver=0.56.2.r395.g1d704fc1b
+pkgver=0.56.2.r434.g9097b3c02
 pkgrel=1
 pkgdesc='Hyprland-based spatial OpenXR compositor installed beside stable Hyprland'
 arch=('x86_64')
@@ -93,7 +93,7 @@ makedepends=(
 )
 options=('!debug')
 
-_commit=1d704fc1b1b5d1cd3a0ce011e41f4d7b0e4622e2
+_commit=9097b3c02bc996d8aa4ac348700727877ac4aa39
 _glaze_commit=b518eec7a22e56ffa238b072c07f47efa7cea97f
 _udis86_commit=5336633af70f3917760a6d441ff02d93477b0c86
 source=(
@@ -103,7 +103,7 @@ source=(
   'hypxrland-session'
   'README.package.md'
 )
-sha256sums=('21af6e78032f84872072c2cbb57ddc34e8f8d4208db2be90beb6088ef4103d5e'
+sha256sums=('fc3041fd892c8a4ec88c7fd9fd1e5394201d5a3f2076c773a4bb576745666cf0'
             '0d108903feb443df316fb53eaec2fd6c1c6d96b368562ad830debc5c6c29c304'
             '2f459fafa19535ef1be417bf7614e4f92475e5787d7ba76df20287cc29d1b5a9'
             '6ed32e1dc75e5e983964e12bd746cc0e31003d07e193e5b598291b3f8be7cce9'
@@ -122,10 +122,10 @@ build() {
   export GIT_COMMIT_HASH=$_commit
   export GIT_BRANCH=hypxrland
   export GIT_COMMIT_MESSAGE="packaged HypXRland snapshot ${_commit:0:10}"
-  export GIT_COMMIT_DATE=2026-10-11
+  export GIT_COMMIT_DATE=2026-10-16
   export GIT_DIRTY=clean
-  export GIT_TAG="v0.56.2-395-g${_commit:0:10}"
-  export GIT_COMMITS=8056
+  export GIT_TAG="v0.56.2-434-g${_commit:0:10}"
+  export GIT_COMMITS=8095
 
   cmake -S "Hyprland-$_commit" -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \

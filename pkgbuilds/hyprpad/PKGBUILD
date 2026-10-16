@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hyprpad
-pkgver=0.20260911.1.g267c660e6
+pkgver=0.20261013.1.gb3f9dc704
 pkgrel=1
 pkgdesc='Drive Hyprland from a Steam Controller or gamepad without giving up Steam Input'
 arch=('x86_64')
@@ -29,13 +29,13 @@ optdepends=(
 # gcc-side -flto out of the vendored Lua objects it links against.
 options=('!debug' '!lto')
 
-_commit=267c660e655ab9df87383bf36082b9bae4cc43ef
+_commit=b3f9dc704f0a08e52b81dde95c9298699925ad76
 source=(
   "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
   'README.package.md'
 )
 sha256sums=(
-  '52b9b532df9a3f8bd66a9a7b43549b2497a1c188d8bf7561d5a3a3b166469bd8'
+  'f54b116617a26b52f4acb0e13ff628a12cbbf6c0d46e861d1bf16610d66fc3d5'
   '3600d02931a246a642cd643e8af09d5b8446b330a52ea11467425f0476937ce2'
 )
 

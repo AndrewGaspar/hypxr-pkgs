@@ -1,8 +1,8 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=monado-xreal
-pkgver=25.1.0.20260719.1.g3752d437c
-pkgrel=4
+pkgver=25.1.0.20261016.1.g6e23edfb3
+pkgrel=1
 pkgdesc='HypXRland Monado runtime for XREAL Air displays'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/monado'
@@ -40,7 +40,7 @@ makedepends=(
 optdepends=('xr-hardware: access rules for additional XR hardware')
 options=('!debug')
 
-_commit=3752d437c5c0b24df659ac749629ac8ead7e1bae
+_commit=6e23edfb3132ebec89fcd1d791651871675f655f
 source=(
   "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
   'monado-xreal.service'
@@ -48,7 +48,7 @@ source=(
   '71-hypxr-xreal-ultra.rules'
 )
 sha256sums=(
-  '68389c23383e2e8e4b7637c0e37fa04a03c8002c1086c422f1f514153cbb5f85'
+  '655f72501c7615cb4952ac4925a6816a820affb9de9e1a6ff22006c82ec331ad'
   'f2521bd19f92ef2bdd28ee06828900043e840f86e9f439c7f4a921ffdbeee385'
   '0018a8db6f14fe3a2199b82049d3a5b213f03f9e1c1e7e8a925d0dd6806cc063'
   '3782597be344cb6a0e802537434ddf62821f6c2600d2996b766c82548c40a930'

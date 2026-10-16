@@ -101,20 +101,20 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 # the whole wave for that reason.
 declare -A expected_pkgrel=(
   [hyprpad]=1
-  [hypxr-keyring]=4
-  [hypxrcompose]=3
-  [hypxrhud]=3
+  [hypxr-keyring]=5
+  [hypxrcompose]=4
+  [hypxrhud]=4
   [hypxrland]=1
-  [hypxrland-legacy-config]=3
-  [hypxrland-omarchy]=3
-  [hypxrland-stack]=4
-  [hypxrpaper]=4
-  [hypxrva]=4
-  [hypxrvoice]=3
-  [hypxrvoice-model-base-en]=4
-  [monado-xreal]=4
-  [voxtype-hypxr]=2
-  [wivrn-hypxr]=3
+  [hypxrland-legacy-config]=4
+  [hypxrland-omarchy]=4
+  [hypxrland-stack]=5
+  [hypxrpaper]=5
+  [hypxrva]=5
+  [hypxrvoice]=4
+  [hypxrvoice-model-base-en]=5
+  [monado-xreal]=1
+  [voxtype-hypxr]=3
+  [wivrn-hypxr]=4
 )
 for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
@@ -122,14 +122,14 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r395.g1d704fc1b-1'
-  'hypxrcompose>=0.20260820.1.gf75ccd4ec-3'
-  'hypxrhud>=0.20260816.1.gf96d0e794-3'
-  'hypxrpaper>=0.20260704.1.g5cae848cd-4'
-  'hypxrva>=0.20260803.1.gbba2c5f8b-4'
-  'hypxrvoice>=0.20260812.1.g7ce7d33b2-3'
-  'hypxrvoice-model-base-en>=1.0.0-4'
-  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-3'
+  'hypxrland>=0.56.2.r434.g9097b3c02-1'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-4'
+  'hypxrhud>=0.20260816.1.gf96d0e794-4'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-5'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-5'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-4'
+  'hypxrvoice-model-base-en>=1.0.0-5'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-4'
 )
 mapfile -t actual_stack_deps < <(
   cd pkgbuilds/hypxrland-stack
@@ -180,7 +180,7 @@ for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
 done
 
 legacy_package=pkgbuilds/hypxrland-legacy-config
-[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-3" ]]
+[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-4" ]]
 mapfile -t legacy_dependencies < <(
   cd "$legacy_package"
   bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
