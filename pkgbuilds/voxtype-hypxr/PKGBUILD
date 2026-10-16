@@ -2,7 +2,7 @@
 
 pkgname=voxtype-hypxr
 pkgver=1.0.1.20260908.1.ga51308e84
-pkgrel=2
+pkgrel=3
 _upstream_version=1.0.1
 _voxtype_compat=1.0.1-1
 pkgdesc='Push-to-talk voice-to-text for Wayland with the Muse streaming engine (HypXR fork)'

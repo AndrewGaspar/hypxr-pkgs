@@ -2,7 +2,7 @@
 
 pkgname=hypxrvoice-model-base-en
 pkgver=1.0.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Whisper base.en speech model for HypXRVoice'
 arch=('any')
 url='https://github.com/openai/whisper'
