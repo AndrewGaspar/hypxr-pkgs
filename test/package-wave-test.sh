@@ -112,7 +112,7 @@ declare -A expected_pkgrel=(
   [hypxrva]=4
   [hypxrvoice]=3
   [hypxrvoice-model-base-en]=4
-  [monado-xreal]=4
+  [monado-xreal]=1
   [voxtype-hypxr]=2
   [wivrn-hypxr]=3
 )
@@ -122,7 +122,7 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r395.g1d704fc1b-1'
+  'hypxrland>=0.56.2.r434.g9097b3c02-1'
   'hypxrcompose>=0.20260820.1.gf75ccd4ec-3'
   'hypxrhud>=0.20260816.1.gf96d0e794-3'
   'hypxrpaper>=0.20260704.1.g5cae848cd-4'
