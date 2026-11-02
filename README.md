@@ -49,6 +49,11 @@ compositor for validating, synthesizing, and rendering `.hypxrtake` captures.
 The `hypxrland-legacy-config` name remains temporarily as an empty upgrade
 transition package; new `hypxrland-omarchy` installations do not depend on it.
 
+`xreal-ctl` switches XREAL Air glasses between 2D and 3D side-by-side and sets
+their brightness; the XR desktop's 2D/3D switch runs it. It is built from the
+same pinned HypXRland archive as `hypxrland`, so a `hypxrland` bump must move
+its `_commit` and checksum too (`test/package-wave-test.sh` enforces this).
+
 `hyprpad`, the Steam Controller daemon for Hyprland, is published from the same
 repository but is not part of `hypxrland-stack`; install it separately with
 `sudo pacman -S hyprpad` and follow `/usr/share/doc/hyprpad/README.package.md`.

@@ -21,6 +21,7 @@ packages=(
   monado-xreal
   voxtype-hypxr
   wivrn-hypxr
+  xreal-ctl
 )
 
 for package in "${packages[@]}"; do
@@ -59,7 +60,8 @@ for package in \
   hypxrvoice \
   monado-xreal \
   voxtype-hypxr \
-  wivrn-hypxr; do
+  wivrn-hypxr \
+  xreal-ctl; do
   [[ $(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "${arch[*]}"') == "x86_64" ]]
 done
 
@@ -115,6 +117,7 @@ declare -A expected_pkgrel=(
   [monado-xreal]=3
   [voxtype-hypxr]=3
   [wivrn-hypxr]=4
+  [xreal-ctl]=1
 )
 for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
@@ -222,6 +225,36 @@ for product in 0424 0426 0428 0432; do
 done
 (( $(rg -c '^ATTRS' "$xreal_rules") == 4 ))
 rg -qF '/usr/lib/udev/rules.d/71-hypxr-xreal.rules' pkgbuilds/monado-xreal/PKGBUILD
+
+# xreal-ctl builds contrib/xreal from the archive hypxrland already pins, so a
+# hypxrland bump must carry it along: same commit, same file name, same sha.
+pkgbuild_value() { # <package> <expression>
+  (cd "pkgbuilds/$1" && bash -c "source PKGBUILD; printf '%s\n' $2")
+}
+xreal_commit=$(pkgbuild_value xreal-ctl '"$_commit"')
+[[ -n $xreal_commit && $xreal_commit == "$(pkgbuild_value hypxrland '"$_commit"')" ]]
+[[ $(pkgbuild_value xreal-ctl '"${source[0]}"') == "$(pkgbuild_value hypxrland '"${source[0]}"')" ]]
+[[ $(pkgbuild_value xreal-ctl '"${sha256sums[0]}"') == "$(pkgbuild_value hypxrland '"${sha256sums[0]}"')" ]]
+(( $(pkgbuild_value xreal-ctl '"${#source[@]}"') == 1 ))
+[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261016.1.g${xreal_commit:0:9}" ]]
+[[ $(pkgbuild_value xreal-ctl '"$url"') == "$(pkgbuild_value hypxrland '"$url"')" ]]
+mapfile -t xreal_depends < <(pkgbuild_value xreal-ctl '"${depends[@]}"')
+[[ ${xreal_depends[*]} == "glibc hidapi" ]]
+rg -qF 'make -C "Hyprland-$_commit/contrib/xreal"' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF '$LDFLAGS' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF '"$pkgdir/usr/bin/xreal-ctl"' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF 'usage: xreal-ctl mode 2d|3d' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF '"$ctl" detect' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF "Is monado-xreal (its udev rules) installed?" pkgbuilds/xreal-ctl/PKGBUILD
+
+# makepkg's errexit ignores a `! cmd` line, so such a check can never fail.
+no_bare_negation_in_check() { # <package>
+  if sed -n '/^check() {/,/^}/p' "pkgbuilds/$1/PKGBUILD" | grep -qE '^[[:space:]]*! '; then
+    echo "FAIL: $1 check() has a bare negated command, which never fails the build" >&2
+    exit 1
+  fi
+}
+no_bare_negation_in_check xreal-ctl
 
 rg -q '^Name=Omarchy XR$' pkgbuilds/hypxrland-omarchy/omarchy-xr.desktop
 rg -q '^Exec=/usr/bin/omarchy-xr-session$' \

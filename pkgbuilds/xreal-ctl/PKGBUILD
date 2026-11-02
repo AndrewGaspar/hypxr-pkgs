@@ -1,0 +1,80 @@
+# Maintainer: Andrew Gaspar
+
+# xreal-ctl switches XREAL Air glasses between 2D (1920x1080) and 3D SBS
+# (3840x1080), and sets their brightness, over the glasses' HID control
+# interface. Every HypXRland desktop 2D/3D switch runs it.
+#
+# The source is one C file in the HypXRland fork's contrib/xreal. This builds
+# it from the commit archive hypxrland already pins (same file name and
+# sha256, so a shared SRCDEST downloads it once) and never rebuilds the
+# compositor. Keep _commit and the checksum equal to hypxrland's.
+#
+# Seat access to the glasses' hidraw nodes comes from monado-xreal's
+# 71-hypxr-xreal.rules (or the AUR's xr-hardware), not from the fork's
+# 70-xreal.rules.
+
+pkgname=xreal-ctl
+pkgver=0.20261016.1.g9097b3c02
+pkgrel=1
+pkgdesc='Display mode and brightness control for XREAL Air glasses'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/Hyprland'
+# xreal-ctl.c is part of the HypXRland fork (BSD-3-Clause). Its packet
+# framing and CRC-32 table come from Monado's xreal_air driver (BSL-1.0).
+license=('BSD-3-Clause' 'BSL-1.0')
+depends=(
+  'glibc'
+  'hidapi'
+)
+makedepends=(
+  'gcc'
+  'make'
+  'pkgconf'
+)
+optdepends=('monado-xreal: seat (uaccess) udev rules for the glasses')
+options=('!debug')
+
+_commit=9097b3c02bc996d8aa4ac348700727877ac4aa39
+source=("hypxrland-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('fc3041fd892c8a4ec88c7fd9fd1e5394201d5a3f2076c773a4bb576745666cf0')
+
+prepare() {
+  # The device rules come from monado-xreal, not the fork's 70-xreal.rules,
+  # so point the open-failure hint there.
+  sed -i 's/Is the 70-xreal\.rules udev rule installed?/Is monado-xreal (its udev rules) installed?/' \
+    "Hyprland-$_commit/contrib/xreal/xreal-ctl.c"
+  grep -qF 'Is monado-xreal (its udev rules) installed?' \
+    "Hyprland-$_commit/contrib/xreal/xreal-ctl.c"
+}
+
+build() {
+  # The Makefile compiles and links in one command, so the link flags ride
+  # in CFLAGS.
+  make -C "Hyprland-$_commit/contrib/xreal" CC="${CC:-cc}" \
+    CFLAGS="$CPPFLAGS $CFLAGS $LDFLAGS"
+}
+
+check() {
+  local ctl="Hyprland-$_commit/contrib/xreal/xreal-ctl"
+  local args status
+
+  # Usage errors exit 2 before any device is opened.
+  for args in "" "mode" "mode 4d" "brightness" "brightness 101" "bogus"; do
+    status=0
+    "$ctl" $args >/dev/null 2>&1 || status=$?
+    (( status == 2 ))
+  done
+  "$ctl" 2>&1 | grep -qF 'usage: xreal-ctl mode 2d|3d'
+
+  # No glasses are attached to a build host.
+  status=0
+  "$ctl" detect >/dev/null 2>&1 || status=$?
+  (( status == 1 ))
+}
+
+package() {
+  install -Dm755 "Hyprland-$_commit/contrib/xreal/xreal-ctl" \
+    "$pkgdir/usr/bin/xreal-ctl"
+  install -Dm644 "Hyprland-$_commit/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
