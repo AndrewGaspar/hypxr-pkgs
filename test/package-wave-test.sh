@@ -391,4 +391,111 @@ rg -Fq 'require("hyprland")' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
 rg -Fq 'openxr = {' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
 rg -Fq 'hl.on("hyprland.start"' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
 
+# The XR session holds the performance power profile (omedora#12). The wrapper
+# runs from a copy whose /usr paths point at stubs, so this needs no XR stack,
+# power-profiles-daemon or system bus.
+session_wrapper=pkgbuilds/hypxrland-omarchy/omarchy-xr-session
+performance_hold=pkgbuilds/hypxrland-omarchy/performance-hold
+omarchy_package=pkgbuilds/hypxrland-omarchy/PKGBUILD
+hold_tmp="$setup_tmp/hold"
+mkdir -p "$hold_tmp/home/.config/hypr"
+: >"$hold_tmp/home/.config/hypr/hyprland-xr.lua"
+cat >"$hold_tmp/session" <<EOF
+#!/bin/bash
+echo "\$\$" >"$hold_tmp/session.pid"
+echo "\$*" >"$hold_tmp/session.args"
+EOF
+cat >"$hold_tmp/hold-ok" <<EOF
+#!/bin/bash
+echo "\$*" >"$hold_tmp/hold.args"
+EOF
+cat >"$hold_tmp/hold-fails" <<EOF
+#!/bin/bash
+echo "\$*" >"$hold_tmp/hold.args"
+exit 1
+EOF
+chmod 0755 "$hold_tmp/session" "$hold_tmp/hold-ok" "$hold_tmp/hold-fails"
+
+stub_session_wrapper() { # <helper path>
+  sed -e "s|/usr/bin/hypxrland-session|$hold_tmp/session|" \
+    -e "s|/usr/bin/omarchy-setup-hypxrland|false|" \
+    -e "s|/usr/lib/hypxrland-omarchy/performance-hold|$1|" \
+    "$session_wrapper" >"$hold_tmp/wrapper"
+  chmod 0755 "$hold_tmp/wrapper"
+}
+run_session_wrapper() { # [env assignments...]
+  rm -f "$hold_tmp/session.pid" "$hold_tmp/session.args" "$hold_tmp/hold.args"
+  env -u HYPXRLAND_PERFORMANCE_HOLD HOME="$hold_tmp/home" XDG_CONFIG_HOME= "$@" \
+    "$hold_tmp/wrapper" --flag value
+}
+wait_for_file() { # <path>
+  local tries
+  for ((tries = 0; tries < 50; tries++)); do
+    [[ -s $1 ]] && return 0
+    sleep 0.1
+  done
+  return 1
+}
+
+rg -qxF '  setsid -f /usr/lib/hypxrland-omarchy/performance-hold "$$" </dev/null || true' \
+  "$session_wrapper"
+
+stub_session_wrapper "$hold_tmp/hold-ok"
+run_session_wrapper
+wait_for_file "$hold_tmp/hold.args"
+# The helper watches the PID the session keeps after its execs.
+[[ $(<"$hold_tmp/hold.args") == "$(<"$hold_tmp/session.pid")" ]]
+[[ $(<"$hold_tmp/session.args") == "--flag value" ]]
+
+run_session_wrapper HYPXRLAND_PERFORMANCE_HOLD=0
+[[ -s $hold_tmp/session.pid ]]
+sleep 0.5
+[[ ! -e $hold_tmp/hold.args ]]
+
+run_session_wrapper HYPXRLAND_PERFORMANCE_HOLD=1
+wait_for_file "$hold_tmp/hold.args"
+
+# A failing or missing helper never stops the session.
+stub_session_wrapper "$hold_tmp/hold-fails"
+run_session_wrapper
+[[ -s $hold_tmp/session.pid ]]
+stub_session_wrapper "$hold_tmp/does-not-exist"
+run_session_wrapper 2>/dev/null
+[[ -s $hold_tmp/session.pid ]]
+
+# The helper fails open, with or without PyGObject installed: no daemon on the
+# bus, or a session that is already gone, is logged and exits 0.
+hold_status=0
+python3 -I "$performance_hold" >/dev/null 2>&1 || hold_status=$?
+(( hold_status == 2 ))
+sleep 2 &
+hold_sleeper=$!
+hold_status=0
+hold_output=$(DBUS_SYSTEM_BUS_ADDRESS="unix:path=$hold_tmp/no-such-bus" \
+  timeout 20 python3 -I "$performance_hold" "$hold_sleeper" 2>&1) || hold_status=$?
+(( hold_status == 0 ))
+[[ $hold_output == *"not holding"* ]]
+wait "$hold_sleeper" || true
+hold_status=0
+hold_output=$(python3 -I "$performance_hold" "$hold_sleeper" 2>&1) || hold_status=$?
+(( hold_status == 0 ))
+[[ $hold_output == *"cannot watch the session process"* ]]
+
+# The helper's contract with power-profiles-daemon, and its packaging.
+rg -qF '"HoldProfile"' "$performance_hold"
+rg -qF '"ReleaseProfile"' "$performance_hold"
+rg -qxF 'BUS_NAME = "org.freedesktop.UPower.PowerProfiles"' "$performance_hold"
+rg -qxF 'PROFILE = "performance"' "$performance_hold"
+rg -qF 'os.pidfd_open(pid)' "$performance_hold"
+mapfile -t session_depends < <(
+  cd pkgbuilds/hypxrland-omarchy
+  bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
+)
+for dependency in python python-gobject util-linux; do
+  printf '%s\n' "${session_depends[@]}" | grep -Fxq "$dependency"
+done
+rg -qF '"$pkgdir/usr/lib/hypxrland-omarchy/performance-hold"' "$omarchy_package"
+rg -qF 'HYPXRLAND_PERFORMANCE_HOLD=0' pkgbuilds/hypxrland-stack/README.md
+no_bare_negation_in_check hypxrland-omarchy
+
 echo "Package-wave checks passed"
