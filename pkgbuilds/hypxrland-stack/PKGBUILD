@@ -20,7 +20,7 @@ depends=(
 optdepends=('monado-xreal: private OpenXR runtime for XREAL Air headsets')
 source=('README.md' 'LICENSE')
 sha256sums=(
-  'dbe31e33ebd3e6ce8e15bd1781bae0c91de7284eb60951b8f3a77fbd08680778'
+  '0b61dbce9393a2f2beeb705cae026b6809149045a36aca54ba12afa5a7628a62'
   '74d049fa7a0860aa2985a167b21c407e49c70eebf665813be444a7da2a16f0fe'
 )
 

@@ -8,16 +8,4 @@ if [[ ! -r $config ]]; then
   /usr/bin/omarchy-setup-hypxrland
 fi
 
-# 6DoF tracking is CPU-bound, and the balanced and power-saver profiles trade
-# CPU speed for power, so hold the "performance" profile while the session
-# runs. The helper is detached and watches this PID. The execs below keep that
-# PID for the whole session: hypxrland-session execs uwsm, which execs its
-# waiting shell. power-profiles-daemon drops the hold when the helper exits.
-# Every failure only logs, so the session never waits on the hold. Picking a
-# profile by hand ends the hold for this session; HYPXRLAND_PERFORMANCE_HOLD=0
-# turns it off.
-if [[ ${HYPXRLAND_PERFORMANCE_HOLD:-1} != "0" ]]; then
-  setsid -f /usr/lib/hypxrland-omarchy/performance-hold "$$" </dev/null || true
-fi
-
 exec /usr/bin/hypxrland-session "$@"

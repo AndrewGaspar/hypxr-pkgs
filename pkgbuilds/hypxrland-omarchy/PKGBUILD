@@ -12,16 +12,11 @@ license=('MIT')
 # helper every 2D/3D desktop switch runs. Hard dependencies, because pacman
 # never installs optdepends. The floors are the builds this wave publishes:
 # monado-xreal -3 is the first whose unit creates its IPC socket directory.
-# The session's performance hold talks to power-profiles-daemon through
-# PyGObject (python, python-gobject) and detaches with setsid (util-linux).
 depends=(
   'hypxrland-stack'
   'monado-xreal>=25.1.0.20261016.1.g6e23edfb3-3'
   'omarchy>=4.0.0'
   'omarchy<4.1'
-  'python'
-  'python-gobject'
-  'util-linux'
   'xreal-ctl>=0.20261016.1.g9097b3c02-1'
 )
 makedepends=('desktop-file-utils')
@@ -31,15 +26,13 @@ source=(
   'omarchy-setup-hypxrland'
   'hyprland-xr.lua'
   'LICENSE'
-  'performance-hold'
 )
 sha256sums=(
   'cc75fe4c50416b9697f71970a691cb08ae9854d45515b8a5076b388d490d6e10'
-  '7ce5fb7356d7865908fa24ccdb2beea83271b4a8bd8a315702eca677b013dd95'
+  '6b866ffa1586ce70a0c46de0b724fa4e6b69f9b3f5024800e545b802ec043f60'
   '9740907c9bfe613e8271dc48840c77218cfa0ccdfaca062910ac3b2bbd133908'
   '65fb0fb1159451aa6634dca1852768c8c8315c27cf04681f18e3bd280154e2a9'
   '74d049fa7a0860aa2985a167b21c407e49c70eebf665813be444a7da2a16f0fe'
-  'eb72afc554de22aa2df70f871da52cbf191cd7fc0dcae38ced0f950e2664ca38'
 )
 
 check() {
@@ -49,20 +42,6 @@ check() {
   grep -Fq 'require("hyprland")' hyprland-xr.lua
   grep -Fq 'openxr = {' hyprland-xr.lua
   grep -Fq 'hl.on("hyprland.start"' hyprland-xr.lua
-
-  grep -qF '/usr/lib/hypxrland-omarchy/performance-hold "$$"' omarchy-xr-session
-  local status sleeper
-  status=0
-  python3 -I performance-hold >/dev/null 2>&1 || status=$?
-  (( status == 2 ))
-  # The hold fails open: with no PowerProfiles daemon (none is reachable here)
-  # it logs and exits 0, and for a session PID that is already gone it exits 0.
-  sleep 3 &
-  sleeper=$!
-  DBUS_SYSTEM_BUS_ADDRESS="unix:path=$srcdir/no-such-bus" \
-    timeout 30 python3 -I performance-hold "$sleeper"
-  wait "$sleeper"
-  python3 -I performance-hold "$sleeper"
 }
 
 package() {
@@ -72,8 +51,6 @@ package() {
     "$pkgdir/usr/bin/omarchy-xr-session"
   install -Dm755 omarchy-setup-hypxrland \
     "$pkgdir/usr/bin/omarchy-setup-hypxrland"
-  install -Dm755 performance-hold \
-    "$pkgdir/usr/lib/hypxrland-omarchy/performance-hold"
   install -Dm644 hyprland-xr.lua \
     "$pkgdir/usr/share/hypxrland/omarchy/hyprland-xr.lua"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
