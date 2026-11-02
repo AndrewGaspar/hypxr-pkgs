@@ -53,7 +53,7 @@ source=(
 )
 sha256sums=(
   '655f72501c7615cb4952ac4925a6816a820affb9de9e1a6ff22006c82ec331ad'
-  '0873933a590f0ea31c3d311666ee9fd96e0d587e3af0050584886e26f30fa635'
+  'd422c9458a8544fd10e16780be3932f86ee2ef30d3a7701b82f312a70987ccd7'
   '0018a8db6f14fe3a2199b82049d3a5b213f03f9e1c1e7e8a925d0dd6806cc063'
   '449fcaa72c86ad899ebb871b95a8605b574f5170c17379f2978c59180d7ae052'
   '8bfb3aea6bd1c64089dcf51ed76ca49e46460c2debf59a0d1343ada377f22219'
@@ -137,6 +137,8 @@ check() {
     grep -F "ATTRS{idVendor}==\"3318\", ATTRS{idProduct}==\"$product\", TAG+=\"uaccess\"" \
       71-hypxr-xreal.rules
   done
+  # The runtime stays out of app.slice, beside the compositor.
+  grep -qx 'Slice=session.slice' monado-xreal.service
   # The runtime pulls the power-saver unit in without depending on it, and that
   # unit is bound to the runtime, so its ExecStop= runs however the runtime
   # ends. The helper fails open: with no PowerProfiles daemon (none is

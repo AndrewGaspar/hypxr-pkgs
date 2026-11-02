@@ -235,6 +235,10 @@ if rg -q '^IOWeight=' pkgbuilds/monado-xreal/monado-xreal.service; then
   echo "FAIL: monado-xreal.service sets IOWeight=, but io is not delegated" >&2
   exit 1
 fi
+# omedora#15: out of app.slice (uresourced resets CPUWeight= there on Fedora),
+# beside the compositor in session.slice.
+(( $(rg -c '^Slice=' pkgbuilds/monado-xreal/monado-xreal.service) == 1 ))
+rg -qx 'Slice=session.slice' pkgbuilds/monado-xreal/monado-xreal.service
 
 # Every local source file matches the checksum its PKGBUILD pins.
 for package in "${packages[@]}"; do
