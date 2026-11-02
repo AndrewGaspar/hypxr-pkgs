@@ -18,4 +18,6 @@ The session refuses to start without a readable config and never falls through
 to the normal Omarchy configuration.
 
 WiVRn pairing, GPU/render-node selection, and device-specific runtime settings
-remain per-user state. The XREAL-specific `monado-xreal` package is optional.
+remain per-user state. `hypxrland-omarchy` also installs `monado-xreal`, the
+XREAL Air runtime, and `xreal-ctl`, which switches the glasses between 2D and
+3D side-by-side for the desktop. The stack alone only suggests `monado-xreal`.

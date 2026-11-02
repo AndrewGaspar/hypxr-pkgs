@@ -108,8 +108,8 @@ declare -A expected_pkgrel=(
   [hypxrhud]=4
   [hypxrland]=1
   [hypxrland-legacy-config]=4
-  [hypxrland-omarchy]=4
-  [hypxrland-stack]=5
+  [hypxrland-omarchy]=5
+  [hypxrland-stack]=6
   [hypxrpaper]=5
   [hypxrva]=5
   [hypxrvoice]=4
@@ -209,6 +209,20 @@ rg -q "'omarchy>=4\.0\.0'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'omarchy<4\.1'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'hypxrland-stack'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD
+rg -qF '`hypxrland-omarchy` also installs `monado-xreal`' pkgbuilds/hypxrland-stack/README.md
+
+# pacman never installs optdepends, so the XR session hard-depends on the XREAL
+# runtime and the 2D/3D helper, at the builds this wave publishes.
+mapfile -t session_depends < <(
+  cd pkgbuilds/hypxrland-omarchy
+  bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
+)
+for package in monado-xreal xreal-ctl; do
+  wave_version=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"')
+  printf '%s\n' "${session_depends[@]}" | grep -Fxq "$package>=$wave_version"
+done
+session_optdepends=$(cd pkgbuilds/hypxrland-omarchy && bash -c 'source PKGBUILD; printf "%s" "${optdepends[*]:-}"')
+[[ -z $session_optdepends ]]
 # The socket lives in monado-xreal/, which only the unit creates.
 rg -qF -- '-DXRT_IPC_MSG_SOCK_FILENAME=monado-xreal/comp_ipc' pkgbuilds/monado-xreal/PKGBUILD
 rg -qx 'RuntimeDirectory=monado-xreal' pkgbuilds/monado-xreal/monado-xreal.service
