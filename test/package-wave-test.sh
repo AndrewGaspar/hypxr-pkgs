@@ -112,7 +112,7 @@ declare -A expected_pkgrel=(
   [hypxrva]=5
   [hypxrvoice]=4
   [hypxrvoice-model-base-en]=5
-  [monado-xreal]=1
+  [monado-xreal]=2
   [voxtype-hypxr]=3
   [wivrn-hypxr]=4
 )
@@ -206,6 +206,10 @@ rg -q "'omarchy>=4\.0\.0'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'omarchy<4\.1'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'hypxrland-stack'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD
+# The socket lives in monado-xreal/, which only the unit creates.
+rg -qF -- '-DXRT_IPC_MSG_SOCK_FILENAME=monado-xreal/comp_ipc' pkgbuilds/monado-xreal/PKGBUILD
+rg -qx 'RuntimeDirectory=monado-xreal' pkgbuilds/monado-xreal/monado-xreal.service
+rg -qx 'RuntimeDirectoryMode=0700' pkgbuilds/monado-xreal/monado-xreal.service
 
 rg -q '^Name=Omarchy XR$' pkgbuilds/hypxrland-omarchy/omarchy-xr.desktop
 rg -q '^Exec=/usr/bin/omarchy-xr-session$' \
