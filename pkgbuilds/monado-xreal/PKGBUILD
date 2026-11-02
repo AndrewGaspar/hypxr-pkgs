@@ -1,8 +1,8 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=monado-xreal
-pkgver=25.1.0.20261016.1.g6e23edfb3
-pkgrel=3
+pkgver=25.1.0.20261102.1.g76c63baca
+pkgrel=1
 pkgdesc='HypXRland Monado runtime for XREAL Air displays'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/monado'
@@ -42,7 +42,7 @@ makedepends=(
 optdepends=('xr-hardware: access rules for additional XR hardware')
 options=('!debug')
 
-_commit=6e23edfb3132ebec89fcd1d791651871675f655f
+_commit=76c63baca9771d77c3455c3eff81a3cd3fd20402
 source=(
   "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
   'monado-xreal.service'
@@ -52,7 +52,7 @@ source=(
   'avoid-power-saver'
 )
 sha256sums=(
-  '655f72501c7615cb4952ac4925a6816a820affb9de9e1a6ff22006c82ec331ad'
+  '6c4cfa27ab0b3dfe9edeeee2a927661bf29de6341ca3314e51c042813f0d1f69'
   'd422c9458a8544fd10e16780be3932f86ee2ef30d3a7701b82f312a70987ccd7'
   '0018a8db6f14fe3a2199b82049d3a5b213f03f9e1c1e7e8a925d0dd6806cc063'
   '449fcaa72c86ad899ebb871b95a8605b574f5170c17379f2978c59180d7ae052'
@@ -96,6 +96,7 @@ build() {
     -DXRT_BUILD_DRIVER_XREAL_AIR=ON \
     -DXRT_BUILD_SAMPLES=OFF \
     -DXRT_FEATURE_DEBUG_GUI=OFF \
+    -DXRT_FEATURE_OPENXR_PLANE_DETECTION=OFF \
     -DXRT_FEATURE_RENDERDOC=OFF \
     -DXRT_FEATURE_SERVICE=ON \
     -DXRT_FEATURE_SERVICE_SYSTEMD=OFF \

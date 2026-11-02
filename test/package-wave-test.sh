@@ -114,7 +114,7 @@ declare -A expected_pkgrel=(
   [hypxrva]=5
   [hypxrvoice]=4
   [hypxrvoice-model-base-en]=5
-  [monado-xreal]=3
+  [monado-xreal]=1
   [voxtype-hypxr]=3
   [wivrn-hypxr]=4
   [xreal-ctl]=1
@@ -125,7 +125,7 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r434.g9097b3c02-1'
+  'hypxrland>=0.56.2.r455.ge3a89bc8c-1'
   'hypxrcompose>=0.20260820.1.gf75ccd4ec-4'
   'hypxrhud>=0.20260816.1.gf96d0e794-4'
   'hypxrpaper>=0.20260704.1.g5cae848cd-5'
@@ -289,7 +289,7 @@ xreal_commit=$(pkgbuild_value xreal-ctl '"$_commit"')
 [[ $(pkgbuild_value xreal-ctl '"${source[0]}"') == "$(pkgbuild_value hypxrland '"${source[0]}"')" ]]
 [[ $(pkgbuild_value xreal-ctl '"${sha256sums[0]}"') == "$(pkgbuild_value hypxrland '"${sha256sums[0]}"')" ]]
 (( $(pkgbuild_value xreal-ctl '"${#source[@]}"') == 1 ))
-[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261016.1.g${xreal_commit:0:9}" ]]
+[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261102.1.g${xreal_commit:0:9}" ]]
 [[ $(pkgbuild_value xreal-ctl '"$url"') == "$(pkgbuild_value hypxrland '"$url"')" ]]
 mapfile -t xreal_depends < <(pkgbuild_value xreal-ctl '"${depends[@]}"')
 [[ ${xreal_depends[*]} == "glibc hidapi" ]]

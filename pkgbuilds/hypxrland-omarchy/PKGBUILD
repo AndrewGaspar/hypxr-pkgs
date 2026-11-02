@@ -14,10 +14,10 @@ license=('MIT')
 # monado-xreal -3 is the first whose unit creates its IPC socket directory.
 depends=(
   'hypxrland-stack'
-  'monado-xreal>=25.1.0.20261016.1.g6e23edfb3-3'
+  'monado-xreal>=25.1.0.20261102.1.g76c63baca-1'
   'omarchy>=4.0.0'
   'omarchy<4.1'
-  'xreal-ctl>=0.20261016.1.g9097b3c02-1'
+  'xreal-ctl>=0.20261102.1.ge3a89bc8c-1'
 )
 makedepends=('desktop-file-utils')
 source=(
