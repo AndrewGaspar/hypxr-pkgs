@@ -227,6 +227,41 @@ session_optdepends=$(cd pkgbuilds/hypxrland-omarchy && bash -c 'source PKGBUILD;
 rg -qF -- '-DXRT_IPC_MSG_SOCK_FILENAME=monado-xreal/comp_ipc' pkgbuilds/monado-xreal/PKGBUILD
 rg -qx 'RuntimeDirectory=monado-xreal' pkgbuilds/monado-xreal/monado-xreal.service
 rg -qx 'RuntimeDirectoryMode=0700' pkgbuilds/monado-xreal/monado-xreal.service
+# The tracker's CPU share and oomd preference; user@.service delegates only
+# pids, memory and cpu, so an IOWeight= would do nothing.
+rg -qx 'CPUWeight=1000' pkgbuilds/monado-xreal/monado-xreal.service
+rg -qx 'ManagedOOMPreference=avoid' pkgbuilds/monado-xreal/monado-xreal.service
+if rg -q '^IOWeight=' pkgbuilds/monado-xreal/monado-xreal.service; then
+  echo "FAIL: monado-xreal.service sets IOWeight=, but io is not delegated" >&2
+  exit 1
+fi
+
+# Every local source file matches the checksum its PKGBUILD pins.
+for package in "${packages[@]}"; do
+  while IFS=$'\t' read -r algorithm file sum; do
+    [[ $sum == "SKIP" ]] && continue
+    if [[ $("${algorithm}sum" "pkgbuilds/$package/$file" | cut -d' ' -f1) != "$sum" ]]; then
+      echo "FAIL: $package/$file does not match its ${algorithm}sums entry" >&2
+      exit 1
+    fi
+  done < <(
+    cd "pkgbuilds/$package"
+    bash -c '
+      source PKGBUILD
+      if (( ${#sha512sums[@]} )); then
+        algorithm=sha512
+        sums=("${sha512sums[@]}")
+      else
+        algorithm=sha256
+        sums=("${sha256sums[@]}")
+      fi
+      for ((i = 0; i < ${#source[@]}; i++)); do
+        [[ ${source[i]} == *://* ]] && continue
+        printf "%s\t%s\t%s\n" "$algorithm" "${source[i]}" "${sums[i]}"
+      done
+    '
+  )
+done
 
 # No Arch or Omarchy repository ships uaccess rules for XREAL glasses
 # (xr-hardware is AUR-only), so monado-xreal's rule must cover every model

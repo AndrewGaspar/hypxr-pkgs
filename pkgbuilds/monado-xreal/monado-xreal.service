@@ -13,6 +13,15 @@ Environment=XRT_NO_STDIN=1
 # it on stop, which also clears the socket the SIGKILL stop leaves behind.
 RuntimeDirectory=monado-xreal
 RuntimeDirectoryMode=0700
+# Win CPU against the other apps in the session: 6DoF tracking takes more than
+# a core and stutters under background load. The unit runs in app.slice, and
+# user@.service delegates the cpu controller, so the weight applies there.
+# There is no IOWeight=: user@.service delegates only pids, memory and cpu.
+CPUWeight=1000
+# Omarchy enables systemd-oomd and lets it kill in the user's app.slice. oomd
+# honors this preference there because the slice and this unit's cgroup have
+# the same owner. Without oomd running the line does nothing.
+ManagedOOMPreference=avoid
 ExecStart=/usr/lib/monado-xreal/monado-service
 Restart=no
 KillSignal=SIGKILL
