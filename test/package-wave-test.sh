@@ -239,6 +239,23 @@ fi
 # beside the compositor in session.slice.
 (( $(rg -c '^Slice=' pkgbuilds/monado-xreal/monado-xreal.service) == 1 ))
 rg -qx 'Slice=session.slice' pkgbuilds/monado-xreal/monado-xreal.service
+# The render thread takes a bounded real-time priority from rtkit over sd-bus,
+# which XRT_HAVE_SYSTEMD builds in; socket activation and Monado's own unit
+# files stay off, and check() proves only the service links libsystemd.
+rg -qx 'Environment=XRT_COMPOSITOR_THREAD_REALTIME=true' \
+  pkgbuilds/monado-xreal/monado-xreal.service
+rg -qxF -- '    -DXRT_HAVE_SYSTEMD=ON \' pkgbuilds/monado-xreal/PKGBUILD
+rg -qxF -- '    -DXRT_FEATURE_SERVICE_SYSTEMD=OFF \' pkgbuilds/monado-xreal/PKGBUILD
+rg -qxF -- '    -DXRT_INSTALL_SYSTEMD_UNIT_FILES=OFF \' pkgbuilds/monado-xreal/PKGBUILD
+monado_check=$(sed -n '/^check() {/,/^}/p' pkgbuilds/monado-xreal/PKGBUILD)
+grep -qxF "  grep -q '^XRT_HAVE_SYSTEMD:BOOL=ON\$' build/CMakeCache.txt" <<<"$monado_check"
+grep -qxF "  grep -qx 'Environment=XRT_COMPOSITOR_THREAD_REALTIME=true' monado-xreal.service" \
+  <<<"$monado_check"
+grep -qxF '  needed=$(readelf -d build/src/xrt/targets/service/monado-service)' <<<"$monado_check"
+grep -qxF "  [[ \$needed == *'Shared library: [libsystemd.so.0]'* ]]" <<<"$monado_check"
+grep -qxF '  needed=$(readelf -d build/src/xrt/targets/openxr/libopenxr_monado_xreal.so)' \
+  <<<"$monado_check"
+grep -qxF "  [[ \$needed != *'[libsystemd.so'* ]]" <<<"$monado_check"
 
 # Every local source file matches the checksum its PKGBUILD pins.
 for package in "${packages[@]}"; do
@@ -444,6 +461,9 @@ mapfile -t runtime_depends < <(
 )
 # busctl, which the helper uses, is in systemd.
 printf '%s\n' "${runtime_depends[@]}" | grep -Fxq systemd
+# The render thread's real-time priority comes from rtkit, over sd-bus.
+printf '%s\n' "${runtime_depends[@]}" | grep -Fxq rtkit
+printf '%s\n' "${runtime_depends[@]}" | grep -Fxq systemd-libs
 if printf '%s\n' "${runtime_depends[@]}" | grep -Fxq -e python -e python-gobject; then
   echo "FAIL: monado-xreal no longer needs python or python-gobject at run time" >&2
   exit 1

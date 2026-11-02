@@ -37,3 +37,11 @@ stopgap until Monado performs well without turbo. It never blocks the runtime:
 with no daemon or no polkit grant, the helper logs why (`journalctl --user -u
 monado-xreal-avoid-power-saver.service`) and exits. To turn it off, run
 `systemctl --user mask monado-xreal-avoid-power-saver.service`.
+
+The runtime's compositor render thread runs at a bounded real-time priority
+(`SCHED_RR` 10) that `rtkit` grants, so the service binary needs no file
+capabilities, which would stop the Vulkan loader from selecting the GPU. If
+`rtkit` refuses and no `RLIMIT_RTPRIO` allows it either, the runtime logs one
+warning (`journalctl --user -u monado-xreal.service`) and runs at normal
+priority. To turn it off, set `XRT_COMPOSITOR_THREAD_REALTIME=false` in a
+drop-in (`systemctl --user edit monado-xreal.service`).

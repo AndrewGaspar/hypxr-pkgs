@@ -11,6 +11,11 @@ Wants=monado-xreal-avoid-power-saver.service
 Type=simple
 Environment=XRT_COMPOSITOR_FORCE_WAYLAND=1
 Environment=XRT_NO_STDIN=1
+# Run the compositor's render thread at a bounded real-time priority (SCHED_RR
+# 10) granted by rtkit, so no file capabilities are needed. If rtkit refuses
+# (and no RLIMIT_RTPRIO allows it), the runtime logs one warning and runs at
+# normal priority.
+Environment=XRT_COMPOSITOR_THREAD_REALTIME=true
 # The build moves the IPC socket to $XDG_RUNTIME_DIR/monado-xreal/comp_ipc and
 # Monado never creates that directory. systemd creates it on start and removes
 # it on stop, which also clears the socket the SIGKILL stop leaves behind.
