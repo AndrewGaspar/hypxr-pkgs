@@ -112,7 +112,7 @@ declare -A expected_pkgrel=(
   [hypxrva]=5
   [hypxrvoice]=4
   [hypxrvoice-model-base-en]=5
-  [monado-xreal]=2
+  [monado-xreal]=3
   [voxtype-hypxr]=3
   [wivrn-hypxr]=4
 )
@@ -210,6 +210,18 @@ rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD
 rg -qF -- '-DXRT_IPC_MSG_SOCK_FILENAME=monado-xreal/comp_ipc' pkgbuilds/monado-xreal/PKGBUILD
 rg -qx 'RuntimeDirectory=monado-xreal' pkgbuilds/monado-xreal/monado-xreal.service
 rg -qx 'RuntimeDirectoryMode=0700' pkgbuilds/monado-xreal/monado-xreal.service
+
+# No Arch or Omarchy repository ships uaccess rules for XREAL glasses
+# (xr-hardware is AUR-only), so monado-xreal's rule must cover every model
+# xreal-ctl and the runtime drive, the hidraw nodes included.
+xreal_rules=pkgbuilds/monado-xreal/71-hypxr-xreal.rules
+[[ ! -e pkgbuilds/monado-xreal/71-hypxr-xreal-ultra.rules ]]
+for product in 0424 0426 0428 0432; do
+  rg -qxF "ATTRS{idVendor}==\"3318\", ATTRS{idProduct}==\"$product\", TAG+=\"uaccess\", ENV{ID_xrhardware}=\"1\"" \
+    "$xreal_rules"
+done
+(( $(rg -c '^ATTRS' "$xreal_rules") == 4 ))
+rg -qF '/usr/lib/udev/rules.d/71-hypxr-xreal.rules' pkgbuilds/monado-xreal/PKGBUILD
 
 rg -q '^Name=Omarchy XR$' pkgbuilds/hypxrland-omarchy/omarchy-xr.desktop
 rg -q '^Exec=/usr/bin/omarchy-xr-session$' \

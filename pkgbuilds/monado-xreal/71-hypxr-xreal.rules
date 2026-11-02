@@ -1,0 +1,13 @@
+# Seat (uaccess) access to every XREAL Air model, for monado-xreal and
+# xreal-ctl. No Arch or Omarchy repository ships a rule for these glasses:
+# xr-hardware, whose 70-xrhardware.rules grants it, is only in the AUR. The
+# lines match xr-hardware 1.1.2's, so with it installed this file changes
+# nothing. They tag every node under the USB device, the hidraw nodes included.
+# Air
+ATTRS{idVendor}=="3318", ATTRS{idProduct}=="0424", TAG+="uaccess", ENV{ID_xrhardware}="1"
+# Air 2
+ATTRS{idVendor}=="3318", ATTRS{idProduct}=="0428", TAG+="uaccess", ENV{ID_xrhardware}="1"
+# Air 2 Pro
+ATTRS{idVendor}=="3318", ATTRS{idProduct}=="0432", TAG+="uaccess", ENV{ID_xrhardware}="1"
+# Air 2 Ultra
+ATTRS{idVendor}=="3318", ATTRS{idProduct}=="0426", TAG+="uaccess", ENV{ID_xrhardware}="1"
