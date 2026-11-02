@@ -19,9 +19,8 @@ depends=(
   'libxcb'
   'libxrandr'
   'mesa'
-  # The performance-hold helper talks to power-profiles-daemon through PyGObject.
-  'python'
-  'python-gobject'
+  # busctl: the power-saver helper reads and sets power-profiles-daemon's profile.
+  'systemd'
   'systemd-libs'
   'vulkan-icd-loader'
   'wayland'
@@ -49,16 +48,16 @@ source=(
   'monado-xreal.service'
   'openxr_monado-xreal.json'
   '71-hypxr-xreal.rules'
-  'monado-xreal-performance-hold.service'
-  'performance-hold'
+  'monado-xreal-avoid-power-saver.service'
+  'avoid-power-saver'
 )
 sha256sums=(
   '655f72501c7615cb4952ac4925a6816a820affb9de9e1a6ff22006c82ec331ad'
-  'a4833e3fe975d4483c5ce16a58c0269275543e0b8943a26243d7817c22214f68'
+  '0873933a590f0ea31c3d311666ee9fd96e0d587e3af0050584886e26f30fa635'
   '0018a8db6f14fe3a2199b82049d3a5b213f03f9e1c1e7e8a925d0dd6806cc063'
   '449fcaa72c86ad899ebb871b95a8605b574f5170c17379f2978c59180d7ae052'
-  '9beb7a91372c38b59c4feaea00967917a911037e0024c446b05ac1136dabfd76'
-  'b45ef6e16bd89d2c780a6934cfb0239697b17689d32cf86b30148aa78db91485'
+  '8bfb3aea6bd1c64089dcf51ed76ca49e46460c2debf59a0d1343ada377f22219'
+  '09fc0ecbbc690760d7222aa6cd4c8bbbe3c70726f9082574853f0bdd81eb95d2'
 )
 
 build() {
@@ -138,15 +137,23 @@ check() {
     grep -F "ATTRS{idVendor}==\"3318\", ATTRS{idProduct}==\"$product\", TAG+=\"uaccess\"" \
       71-hypxr-xreal.rules
   done
-  # The runtime pulls the performance hold in without depending on it, and the
-  # hold is bound to the runtime. It fails open: with no PowerProfiles daemon
-  # (none is reachable here) it logs and exits 0.
-  grep -qx 'Wants=monado-xreal-performance-hold.service' monado-xreal.service
-  grep -qx 'BindsTo=monado-xreal.service' monado-xreal-performance-hold.service
-  grep -qx 'ExecStart=/usr/lib/monado-xreal/performance-hold' \
-    monado-xreal-performance-hold.service
-  DBUS_SYSTEM_BUS_ADDRESS="unix:path=$srcdir/no-such-bus" \
-    timeout 30 python3 -I performance-hold
+  # The runtime pulls the power-saver unit in without depending on it, and that
+  # unit is bound to the runtime, so its ExecStop= runs however the runtime
+  # ends. The helper fails open: with no PowerProfiles daemon (none is
+  # reachable here) both steps log and exit 0.
+  grep -qx 'Wants=monado-xreal-avoid-power-saver.service' monado-xreal.service
+  grep -qx 'BindsTo=monado-xreal.service' monado-xreal-avoid-power-saver.service
+  grep -qx 'ExecStart=/usr/lib/monado-xreal/avoid-power-saver enter' \
+    monado-xreal-avoid-power-saver.service
+  grep -qx 'ExecStop=/usr/lib/monado-xreal/avoid-power-saver leave' \
+    monado-xreal-avoid-power-saver.service
+  mkdir -p "$srcdir/avoid-power-saver-rt"
+  local step
+  for step in enter leave; do
+    RUNTIME_DIRECTORY="$srcdir/avoid-power-saver-rt" \
+      DBUS_SYSTEM_BUS_ADDRESS="unix:path=$srcdir/no-such-bus" \
+      timeout 30 ./avoid-power-saver "$step"
+  done
 }
 
 package() {
@@ -162,10 +169,10 @@ package() {
     "$pkgdir/usr/lib/monado-xreal/libmonado.so"
   install -Dm644 monado-xreal.service \
     "$pkgdir/usr/lib/systemd/user/monado-xreal.service"
-  install -Dm644 monado-xreal-performance-hold.service \
-    "$pkgdir/usr/lib/systemd/user/monado-xreal-performance-hold.service"
-  install -Dm755 performance-hold \
-    "$pkgdir/usr/lib/monado-xreal/performance-hold"
+  install -Dm644 monado-xreal-avoid-power-saver.service \
+    "$pkgdir/usr/lib/systemd/user/monado-xreal-avoid-power-saver.service"
+  install -Dm755 avoid-power-saver \
+    "$pkgdir/usr/lib/monado-xreal/avoid-power-saver"
   install -Dm644 openxr_monado-xreal.json \
     "$pkgdir/usr/share/openxr/1/openxr_monado-xreal.json"
   install -Dm644 71-hypxr-xreal.rules \

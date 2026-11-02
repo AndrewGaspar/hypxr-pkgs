@@ -22,15 +22,18 @@ remain per-user state. `hypxrland-omarchy` also installs `monado-xreal`, the
 XREAL Air runtime, and `xreal-ctl`, which switches the glasses between 2D and
 3D side-by-side for the desktop. The stack alone only suggests `monado-xreal`.
 
-While the XREAL runtime runs, `monado-xreal` holds the `performance` power
-profile through power-profiles-daemon's hold API, because 6DoF tracking is
-CPU-bound. `monado-xreal.service` pulls in
-`monado-xreal-performance-hold.service`, which is bound to it: stopping,
-crashing or killing the runtime stops the hold, and the daemon then drops it.
-The hold is a stopgap until Monado performs well without turbo. It never blocks
-the runtime: with no daemon, no polkit grant or no performance profile, the
-helper logs why (`journalctl --user -u monado-xreal-performance-hold.service`)
-and exits. Picking a power profile by hand ends the hold until the runtime next
-starts. To turn it off, run
-`systemctl --user mask monado-xreal-performance-hold.service`. There is no
-battery-level cut-off.
+While the XREAL runtime runs, `monado-xreal` keeps it off the `power-saver`
+power profile, which turns turbo off, because 6DoF tracking needs turbo.
+`monado-xreal.service` pulls in `monado-xreal-avoid-power-saver.service`: if the
+active profile is `power-saver`, it switches to `balanced`, and when the runtime
+stops, crashes or is killed it switches back, unless the profile was changed in
+the meantime. `balanced`, `performance` and a `power-saver` another application
+holds are left alone, and it checks only when the runtime starts. It does not
+ask for `performance`: on a laptop whose CPU and GPU share one power limit,
+`performance` keeps every core at full clock and the GPU throttles to its
+minimum, while `balanced` keeps turbo and leaves power for the GPU. Whether
+`performance` helps on AC power or with a discrete GPU is untested. This is a
+stopgap until Monado performs well without turbo. It never blocks the runtime:
+with no daemon or no polkit grant, the helper logs why (`journalctl --user -u
+monado-xreal-avoid-power-saver.service`) and exits. To turn it off, run
+`systemctl --user mask monado-xreal-avoid-power-saver.service`.
