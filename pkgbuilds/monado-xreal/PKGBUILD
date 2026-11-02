@@ -19,6 +19,9 @@ depends=(
   'libxcb'
   'libxrandr'
   'mesa'
+  # The performance-hold helper talks to power-profiles-daemon through PyGObject.
+  'python'
+  'python-gobject'
   'systemd-libs'
   'vulkan-icd-loader'
   'wayland'
@@ -46,12 +49,16 @@ source=(
   'monado-xreal.service'
   'openxr_monado-xreal.json'
   '71-hypxr-xreal.rules'
+  'monado-xreal-performance-hold.service'
+  'performance-hold'
 )
 sha256sums=(
   '655f72501c7615cb4952ac4925a6816a820affb9de9e1a6ff22006c82ec331ad'
-  '51bf01779d660a3658dd80d5f5b18606d29cc457b7d6969d180c50cd1b41a5c5'
+  'a4833e3fe975d4483c5ce16a58c0269275543e0b8943a26243d7817c22214f68'
   '0018a8db6f14fe3a2199b82049d3a5b213f03f9e1c1e7e8a925d0dd6806cc063'
   '449fcaa72c86ad899ebb871b95a8605b574f5170c17379f2978c59180d7ae052'
+  '9beb7a91372c38b59c4feaea00967917a911037e0024c446b05ac1136dabfd76'
+  'b45ef6e16bd89d2c780a6934cfb0239697b17689d32cf86b30148aa78db91485'
 )
 
 build() {
@@ -131,6 +138,15 @@ check() {
     grep -F "ATTRS{idVendor}==\"3318\", ATTRS{idProduct}==\"$product\", TAG+=\"uaccess\"" \
       71-hypxr-xreal.rules
   done
+  # The runtime pulls the performance hold in without depending on it, and the
+  # hold is bound to the runtime. It fails open: with no PowerProfiles daemon
+  # (none is reachable here) it logs and exits 0.
+  grep -qx 'Wants=monado-xreal-performance-hold.service' monado-xreal.service
+  grep -qx 'BindsTo=monado-xreal.service' monado-xreal-performance-hold.service
+  grep -qx 'ExecStart=/usr/lib/monado-xreal/performance-hold' \
+    monado-xreal-performance-hold.service
+  DBUS_SYSTEM_BUS_ADDRESS="unix:path=$srcdir/no-such-bus" \
+    timeout 30 python3 -I performance-hold
 }
 
 package() {
@@ -146,6 +162,10 @@ package() {
     "$pkgdir/usr/lib/monado-xreal/libmonado.so"
   install -Dm644 monado-xreal.service \
     "$pkgdir/usr/lib/systemd/user/monado-xreal.service"
+  install -Dm644 monado-xreal-performance-hold.service \
+    "$pkgdir/usr/lib/systemd/user/monado-xreal-performance-hold.service"
+  install -Dm755 performance-hold \
+    "$pkgdir/usr/lib/monado-xreal/performance-hold"
   install -Dm644 openxr_monado-xreal.json \
     "$pkgdir/usr/share/openxr/1/openxr_monado-xreal.json"
   install -Dm644 71-hypxr-xreal.rules \

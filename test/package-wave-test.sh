@@ -498,4 +498,153 @@ rg -qF '"$pkgdir/usr/lib/hypxrland-omarchy/performance-hold"' "$omarchy_package"
 rg -qF 'HYPXRLAND_PERFORMANCE_HOLD=0' pkgbuilds/hypxrland-stack/README.md
 no_bare_negation_in_check hypxrland-omarchy
 
+# monado-xreal holds the performance power profile while the runtime runs
+# (omedora#12), a stopgap until Monado runs well without turbo: the runtime
+# pulls the hold unit in with Wants=, and the hold is bound to the runtime.
+runtime_unit=pkgbuilds/monado-xreal/monado-xreal.service
+hold_unit=pkgbuilds/monado-xreal/monado-xreal-performance-hold.service
+hold_helper=pkgbuilds/monado-xreal/performance-hold
+rg -qx 'Wants=monado-xreal-performance-hold.service' "$runtime_unit"
+if rg -q '^(Requires|Requisite|BindsTo|After|Upholds)=.*performance-hold' "$runtime_unit"; then
+  echo "FAIL: monado-xreal.service must never depend on or wait for the hold" >&2
+  exit 1
+fi
+(( $(grep -v '^#' "$runtime_unit" | grep -c 'performance-hold') == 1 ))
+rg -qx 'BindsTo=monado-xreal.service' "$hold_unit"
+rg -qx 'After=monado-xreal.service' "$hold_unit"
+rg -qx 'Type=simple' "$hold_unit"
+rg -qx 'Restart=no' "$hold_unit"
+rg -qx 'ExecStart=/usr/lib/monado-xreal/performance-hold' "$hold_unit"
+if rg -q '^\[Install\]' "$hold_unit"; then
+  echo "FAIL: the hold unit has no [Install]; only the runtime pulls it in" >&2
+  exit 1
+fi
+[[ -x $hold_helper ]]
+rg -qF '"HoldProfile"' "$hold_helper"
+rg -qF '"ReleaseProfile"' "$hold_helper"
+rg -qxF 'BUS_NAME = "org.freedesktop.UPower.PowerProfiles"' "$hold_helper"
+rg -qxF 'PROFILE = "performance"' "$hold_helper"
+rg -qxF 'APP_ID = "monado-xreal"' "$hold_helper"
+rg -qxF 'REASON = "XREAL runtime running"' "$hold_helper"
+if rg -q 'pidfd|argv\[1\]' "$hold_helper"; then
+  echo "FAIL: the hold helper has no PID-watching mode left" >&2
+  exit 1
+fi
+mapfile -t runtime_depends < <(
+  cd pkgbuilds/monado-xreal
+  bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
+)
+for dependency in python python-gobject; do
+  printf '%s\n' "${runtime_depends[@]}" | grep -Fxq "$dependency"
+done
+rg -qF '"$pkgdir/usr/lib/systemd/user/monado-xreal-performance-hold.service"' \
+  pkgbuilds/monado-xreal/PKGBUILD
+rg -qF '"$pkgdir/usr/lib/monado-xreal/performance-hold"' pkgbuilds/monado-xreal/PKGBUILD
+
+# The helper itself: usage, then against a fake power-profiles-daemon on a
+# private bus it must hold until SIGTERM or SIGINT, release, and exit 0, and it
+# must fail open (log, exit 0) on a refused hold or with no bus.
+hold_status=0
+python3 -I "$hold_helper" extra >/dev/null 2>&1 || hold_status=$?
+(( hold_status == 2 ))
+if python3 -I -c 'from gi.repository import Gio' 2>/dev/null && command -v dbus-daemon >/dev/null; then
+  live_tmp="$setup_tmp/runtime-hold"
+  mkdir -p "$live_tmp"
+  cat >"$live_tmp/fake-daemon.py" <<'EOF_DAEMON'
+import os
+import sys
+from gi.repository import Gio, GLib
+
+LOG = sys.argv[1]
+XML = """<node><interface name="org.freedesktop.UPower.PowerProfiles">
+<method name="HoldProfile"><arg type="s" direction="in"/><arg type="s" direction="in"/>
+<arg type="s" direction="in"/><arg type="u" direction="out"/></method>
+<method name="ReleaseProfile"><arg type="u" direction="in"/></method>
+</interface></node>"""
+
+
+def record(line):
+    with open(LOG, "a") as log:
+        log.write(line + "\n")
+
+
+def on_call(conn, sender, path, iface, method, params, invocation):
+    if method == "HoldProfile":
+        if os.path.exists(LOG + ".refuse"):
+            invocation.return_dbus_error("org.freedesktop.DBus.Error.AccessDenied", "refused")
+            return
+        record("hold " + "|".join(params.unpack()))
+        invocation.return_value(GLib.Variant("(u)", (7,)))
+    else:
+        record("release %d" % params.unpack()[0])
+        invocation.return_value(None)
+
+
+def on_bus(conn, name):
+    info = Gio.DBusNodeInfo.new_for_xml(XML).interfaces[0]
+    conn.register_object("/org/freedesktop/UPower/PowerProfiles", info, on_call, None, None)
+
+
+Gio.bus_own_name(Gio.BusType.SYSTEM, "org.freedesktop.UPower.PowerProfiles",
+                 Gio.BusNameOwnerFlags.NONE, on_bus, lambda *a: record("ready"), None)
+GLib.MainLoop().run()
+EOF_DAEMON
+  live_log="$live_tmp/daemon.log"
+  dbus-daemon --session --nofork --address="unix:path=$live_tmp/bus" >/dev/null 2>&1 &
+  live_bus=$!
+  for ((tries = 0; tries < 50; tries++)); do
+    [[ -S $live_tmp/bus ]] && break
+    sleep 0.1
+  done
+  DBUS_SYSTEM_BUS_ADDRESS="unix:path=$live_tmp/bus" \
+    python3 -I -W ignore::DeprecationWarning "$live_tmp/fake-daemon.py" "$live_log" &
+  live_daemon=$!
+  trap 'kill "$live_daemon" "$live_bus" 2>/dev/null || true; rm -rf "$setup_tmp"' EXIT
+  wait_for_log_line() { # <line>
+    local tries
+    for ((tries = 0; tries < 100; tries++)); do
+      grep -qxF -- "$1" "$live_log" 2>/dev/null && return 0
+      sleep 0.1
+    done
+    return 1
+  }
+  wait_for_log_line ready
+  for stop_signal in TERM INT; do
+    : >"$live_log"
+    DBUS_SYSTEM_BUS_ADDRESS="unix:path=$live_tmp/bus" \
+      python3 -I "$hold_helper" 2>"$live_tmp/hold.err" &
+    hold_pid=$!
+    wait_for_log_line 'hold performance|XREAL runtime running|monado-xreal'
+    sleep 0.5
+    kill -0 "$hold_pid"
+    (( $(grep -c '^release' "$live_log") == 0 ))
+    kill "-$stop_signal" "$hold_pid"
+    timeout 20 tail --pid="$hold_pid" -f /dev/null
+    hold_status=0
+    wait "$hold_pid" || hold_status=$?
+    (( hold_status == 0 ))
+    wait_for_log_line 'release 7'
+    grep -qF "released 'performance'" "$live_tmp/hold.err"
+  done
+  : >"$live_log.refuse"
+  hold_status=0
+  hold_output=$(DBUS_SYSTEM_BUS_ADDRESS="unix:path=$live_tmp/bus" \
+    timeout 20 python3 -I "$hold_helper" 2>&1) || hold_status=$?
+  rm -f "$live_log.refuse"
+  (( hold_status == 0 ))
+  [[ $hold_output == *"AccessDenied: refused"* ]]
+  kill "$live_daemon" "$live_bus" 2>/dev/null || true
+elif [[ -n ${CI:-} ]]; then
+  echo "FAIL: the runtime-hold checks need PyGObject and dbus-daemon in CI" >&2
+  exit 1
+else
+  echo "SKIP: live runtime-hold checks need PyGObject and dbus-daemon" >&2
+fi
+hold_status=0
+hold_output=$(DBUS_SYSTEM_BUS_ADDRESS="unix:path=$setup_tmp/no-such-bus" \
+  timeout 20 python3 -I "$hold_helper" 2>&1) || hold_status=$?
+(( hold_status == 0 ))
+[[ $hold_output == *"not holding"* ]]
+no_bare_negation_in_check monado-xreal
+
 echo "Package-wave checks passed"
