@@ -120,7 +120,12 @@ check() {
   grep -q '^XRT_HAVE_WAYLAND:BOOL=ON$' build/CMakeCache.txt
   grep -F '/usr/lib/monado-xreal/libopenxr_monado_xreal.so' \
     openxr_monado-xreal.json
-  ! getcap build/src/xrt/targets/service/monado-service | grep -q .
+  # No file capabilities: they would put the Vulkan loader in secure-execution
+  # mode. makepkg's errexit ignores a `! cmd` line, so test the captured
+  # output; the assignment fails the build if getcap itself fails.
+  local caps
+  caps=$(getcap build/src/xrt/targets/service/monado-service)
+  [[ -z $caps ]]
   local product
   for product in 0424 0426 0428 0432; do
     grep -F "ATTRS{idVendor}==\"3318\", ATTRS{idProduct}==\"$product\", TAG+=\"uaccess\"" \

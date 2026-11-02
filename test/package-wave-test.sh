@@ -269,6 +269,11 @@ no_bare_negation_in_check() { # <package>
   fi
 }
 no_bare_negation_in_check xreal-ctl
+no_bare_negation_in_check monado-xreal
+sed -n '/^check() {/,/^}/p' pkgbuilds/monado-xreal/PKGBUILD |
+  grep -qxF '  caps=$(getcap build/src/xrt/targets/service/monado-service)'
+sed -n '/^check() {/,/^}/p' pkgbuilds/monado-xreal/PKGBUILD |
+  grep -qxF '  [[ -z $caps ]]'
 
 rg -q '^Name=Omarchy XR$' pkgbuilds/hypxrland-omarchy/omarchy-xr.desktop
 rg -q '^Exec=/usr/bin/omarchy-xr-session$' \
