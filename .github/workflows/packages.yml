@@ -5,10 +5,11 @@ on:
   push:
     branches:
       - master
+      - next
   workflow_dispatch:
     inputs:
       publish:
-        description: Sign and publish this build to the edge repository
+        description: Sign and publish this build (master to edge, next to next)
         required: true
         default: false
         type: boolean
@@ -22,12 +23,10 @@ concurrency:
 
 env:
   ARCH: x86_64
-  MIRROR: edge
-  # The edge channel currently serves Omarchy 4 (stable 4.0.x): build it
-  # against Omarchy's stable ring, whose Arch snapshot still carries the
-  # hyprland 0.56 stack hypxrland is based on. Omarchy edge is 4.5 with
-  # hyprland 0.57.
-  OMARCHY_RING: stable
+  # The branch picks the channel: master (and PRs into it) builds edge, for
+  # Omarchy stable; next (and PRs into it) builds next, for Omarchy edge.
+  # bin/build maps each channel to its Omarchy ring.
+  MIRROR: ${{ (github.ref == 'refs/heads/next' || github.base_ref == 'next') && 'next' || 'edge' }}
   RELEASE_ARTIFACT: hypxr-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
@@ -48,7 +47,7 @@ jobs:
       - name: Run repository tests
         run: test/run.sh
 
-      - name: Build complete edge package wave
+      - name: Build complete package wave
         run: |
           source helpers/package-metadata.sh
           mapfile -t packages < <(packages_for_mirror "$MIRROR")
@@ -160,7 +159,7 @@ jobs:
 
   stage:
     if: >-
-      github.ref == 'refs/heads/master' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/next') &&
       (github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.publish))
     needs:
@@ -212,7 +211,9 @@ jobs:
             --header-upload "Cache-Control: private, no-store"
 
   publish:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/master'
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.publish &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/next')
     needs: stage
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -255,15 +256,16 @@ jobs:
           for file in hypxr.gpg hypxr-trusted hypxr-revoked; do
             cmp "pkgbuilds/hypxr-keyring/$file" "$trust_check/hypxr-keyring/$file"
           done
+          # The checked-in bootstrap installs the edge channel on every branch.
           bin/render-bootstrap \
             --public-key "$trust_check/hypxr-public.asc" \
             --primary-fingerprint "$HYPXR_PRIMARY_FINGERPRINT" \
             --repo-base https://hypxr.omedora.org \
-            --channel "$MIRROR" \
+            --channel edge \
             --output "$trust_check/install-hypxr.sh"
           cmp install-hypxr.sh "$trust_check/install-hypxr.sh"
 
-      - name: Sign and publish edge repository
+      - name: Sign and publish the channel repository
         run: |
           set -euo pipefail
           bin/verify-release-manifest \

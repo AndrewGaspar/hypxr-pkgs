@@ -3,9 +3,12 @@
 set -euo pipefail
 
 ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
-CANDIDATE_DIR=${1:-$ROOT/build-output/edge/x86_64}
+source "$ROOT/helpers/package-metadata.sh"
+MIRROR=${MIRROR:-edge}
+OMARCHY_RING=${OMARCHY_RING:-$(channel_omarchy_ring "$MIRROR")}
+CANDIDATE_DIR=${1:-$ROOT/build-output/$MIRROR/x86_64}
 # bin/build tags its image by the Omarchy ring the wave was built against.
-IMAGE=${HYPXR_TEST_IMAGE:-hypxr-pkg-builder:latest-x86_64-${OMARCHY_RING:-edge}}
+IMAGE=${HYPXR_TEST_IMAGE:-hypxr-pkg-builder:latest-x86_64-$OMARCHY_RING}
 OLD_VERSION=3.8.4-3
 OLD_FILENAME="hypxrland-legacy-config-$OLD_VERSION-any.pkg.tar.zst"
 
