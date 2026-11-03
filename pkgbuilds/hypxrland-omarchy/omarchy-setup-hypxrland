@@ -17,9 +17,9 @@ if [[ -e $config || -L $config ]]; then
   exit 0
 fi
 
+# HypXRland 0.57 reads Lua only: a legacy .conf stays in place, unread.
 if [[ -r $legacy_config ]]; then
-  echo "Keeping legacy HypXRland config during transition: $legacy_config"
-  exit 0
+  echo "Legacy HypXRland config is no longer read and stays untouched: $legacy_config"
 fi
 
 if [[ ! -r $template ]]; then

@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrland
-pkgver=0.56.2.r455.ge3a89bc8c
+pkgver=0.57.0.r482.g078acf7f6
 pkgrel=1
 pkgdesc='Hyprland-based spatial OpenXR compositor installed beside stable Hyprland'
 arch=('x86_64')
@@ -13,7 +13,7 @@ license=(
   'LGPL-2.1-or-later'
 )
 depends=(
-  'aquamarine'
+  'aquamarine>=0.15.0'
   'libaquamarine.so'
   'cairo'
   'libgcc'
@@ -28,11 +28,11 @@ depends=(
   'libhyprcursor.so'
   'hyprgraphics'
   'libhyprgraphics.so'
-  'hyprland>=0.56.2'
-  'hyprland<0.57'
+  'hyprland>=0.57.0'
+  'hyprland<0.58'
   'hyprlang'
   'libhyprlang.so'
-  'hyprutils'
+  'hyprutils>=0.14.2'
   'libhyprutils.so'
   'hyprwire'
   'libhyprwire.so'
@@ -42,6 +42,7 @@ depends=(
   'libglvnd'
   'libEGL.so'
   'libGLESv2.so'
+  'libcanberra'
   'libei'
   'libeis.so'
   'libinput'
@@ -60,9 +61,13 @@ depends=(
   'openxr'
   'pango'
   'pixman'
+  # xreal-capture, the XREAL flight-recorder CLI (pack uses zstd).
+  'python'
   're2'
   'libre2.so'
   'readline'
+  'sdbus-cpp'
+  'libsdbus-c++.so'
   'seatd'
   'systemd-libs'
   'tomlplusplus'
@@ -79,10 +84,11 @@ depends=(
   'xcb-util-wm'
   'xorg-xwayland'
   'libxkbcommon.so'
+  'zstd'
 )
 makedepends=(
   'cmake'
-  'hyprland-protocols'
+  'hyprland-protocols>=0.8.0'
   'hyprwayland-scanner'
   'meson'
   'ninja'
@@ -93,7 +99,7 @@ makedepends=(
 )
 options=('!debug')
 
-_commit=e3a89bc8c16690cb6b69c27350c18a80b51f68b5
+_commit=078acf7f616d876655609f490216c5279c287b3c
 _glaze_commit=b518eec7a22e56ffa238b072c07f47efa7cea97f
 _udis86_commit=5336633af70f3917760a6d441ff02d93477b0c86
 source=(
@@ -103,10 +109,10 @@ source=(
   'hypxrland-session'
   'README.package.md'
 )
-sha256sums=('fdfaaaefe5d386a62ab95a2fe62c7f0d97f7e03442ec6cdbdd58cee3a5a147f7'
+sha256sums=('426714f139f76bad0aedae44b559ba86b999f5d40adee15efa8d91006067cd44'
             '0d108903feb443df316fb53eaec2fd6c1c6d96b368562ad830debc5c6c29c304'
             '2f459fafa19535ef1be417bf7614e4f92475e5787d7ba76df20287cc29d1b5a9'
-            '6ed32e1dc75e5e983964e12bd746cc0e31003d07e193e5b598291b3f8be7cce9'
+            '2bdb687a24c7a4588e41db1ec5b4ad6ec951ab00715b7beafb2f01af6934f2e7'
             '96b273af40e386a78f29ddf2698ef22e2d309be23e1582869f9ab81a02e49cc7')
 
 prepare() {
@@ -120,12 +126,12 @@ build() {
   # (check() then fails). Docker builds have no parent repo, so this is a no-op there.
   export GIT_CEILING_DIRECTORIES="$srcdir"
   export GIT_COMMIT_HASH=$_commit
-  export GIT_BRANCH=hypxrland
+  export GIT_BRANCH=hypxrland-0.57.0
   export GIT_COMMIT_MESSAGE="packaged HypXRland snapshot ${_commit:0:10}"
-  export GIT_COMMIT_DATE=2026-11-02
+  export GIT_COMMIT_DATE=2026-11-03
   export GIT_DIRTY=clean
-  export GIT_TAG="v0.56.2-455-g${_commit:0:10}"
-  export GIT_COMMITS=8116
+  export GIT_TAG="v0.57.0-482-g${_commit:0:10}"
+  export GIT_COMMITS=8460
 
   cmake -S "Hyprland-$_commit" -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
@@ -142,6 +148,11 @@ build() {
   grep -q '^openxr_dep_FOUND:INTERNAL=1$' build/CMakeCache.txt
   grep -Eq '^HYPR_VULKAN_INCLUDE_DIR:PATH=/.*' build/CMakeCache.txt
   cmake --build build --target Hyprland hyprctl
+
+  # xreal-capture looks for the private hyprctl at Fedora's libexec path; Arch
+  # keeps it in /usr/lib/hypxrland. ([e] keeps the Fedora path out of this file.)
+  sed -E 's|/usr/lib[e]xec/hypxrland/hyprctl|/usr/lib/hypxrland/hyprctl|g' \
+    "Hyprland-$_commit/scripts/xreal-capture" > build/xreal-capture
 }
 
 check() {
@@ -152,6 +163,12 @@ check() {
   chmod 0700 "$runtime_dir"
   XDG_RUNTIME_DIR="$runtime_dir" build/Hyprland --version | grep -F "$_commit"
   build/hyprctl/hyprctl --help | grep -F openxr
+  grep -qF '"/usr/lib/hypxrland/hyprctl"' build/xreal-capture
+  # (makepkg's errexit ignores a `! cmd` line.)
+  if grep -qE '/usr/lib[e]xec/hypxrland' build/xreal-capture; then
+    return 1
+  fi
+  python -c 'import ast, sys; ast.parse(open(sys.argv[1]).read())' build/xreal-capture
   ! readelf -d build/Hyprland | grep -E 'RPATH|RUNPATH'
   ! ldd build/Hyprland | grep -F 'not found'
   rm -rf "$runtime_dir"
@@ -161,6 +178,7 @@ package() {
   install -Dm755 build/Hyprland "$pkgdir/usr/lib/hypxrland/Hyprland"
   install -Dm755 build/hyprctl/hyprctl "$pkgdir/usr/lib/hypxrland/hyprctl"
   install -Dm755 hypxrland-session "$pkgdir/usr/bin/hypxrland-session"
+  install -Dm755 build/xreal-capture "$pkgdir/usr/bin/xreal-capture"
 
   install -Dm644 "Hyprland-$_commit/LICENSE" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
@@ -168,8 +186,10 @@ package() {
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE.udis86"
   install -Dm644 "Hyprland-$_commit/protocols/wlr-foreign-toplevel-management-unstable-v1.xml" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE.HPND-sell-variant.xml"
-  install -Dm644 "Hyprland-$_commit/example/openxr.conf" \
-    "$pkgdir/usr/share/doc/$pkgname/openxr.conf"
+  install -Dm644 "Hyprland-$_commit/example/openxr.lua" \
+    "$pkgdir/usr/share/doc/$pkgname/openxr.lua"
+  install -Dm644 "Hyprland-$_commit/docs/openxr/12-porting-to-0.57.md" \
+    "$pkgdir/usr/share/doc/$pkgname/12-porting-to-0.57.md"
   install -Dm644 "Hyprland-$_commit/docs/openxr/00-overview.md" \
     "$pkgdir/usr/share/doc/$pkgname/00-overview.md"
   install -Dm644 "Hyprland-$_commit/docs/openxr/05-configuration.md" \

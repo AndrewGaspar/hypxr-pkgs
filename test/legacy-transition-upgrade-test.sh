@@ -66,13 +66,6 @@ fi
 [[ ! -e $config_dir/hyprland-xr.lua ]]
 [[ -f /usr/share/doc/hypxrland-legacy-config/README.md ]]
 
-runuser -u builder -- env \
-  HOME=/home/builder \
-  XDG_CONFIG_HOME=/home/builder/.config \
-  HYPXRLAND_OMARCHY_TEMPLATE=/workspace/pkgbuilds/hypxrland-omarchy/hyprland-xr.lua \
-  bash /workspace/pkgbuilds/hypxrland-omarchy/omarchy-setup-hypxrland >/dev/null
-[[ ! -e $config_dir/hyprland-xr.lua ]]
-
 mock_dir=/var/tmp/hypxr-transition-bin
 mkdir -p "$mock_dir"
 cat >"$mock_dir/uwsm" <<'EOF'
@@ -80,14 +73,34 @@ cat >"$mock_dir/uwsm" <<'EOF'
 printf '%s\n' "$@"
 EOF
 chmod 0755 "$mock_dir/uwsm"
+
+# HypXRland 0.57 reads Lua only: the legacy .conf alone is refused.
+status=0
 runuser -u builder -- env \
   HOME=/home/builder \
   XDG_CONFIG_HOME=/home/builder/.config \
   PATH="$mock_dir:/usr/bin" \
   bash /workspace/pkgbuilds/hypxrland/hypxrland-session \
-  >/var/tmp/legacy-command 2>/var/tmp/legacy-warning
-grep -Fxq "$config_dir/hyprland-xr.conf" /var/tmp/legacy-command
-grep -Fq 'legacy hyprland-xr.conf is deprecated' /var/tmp/legacy-warning
+  >/var/tmp/legacy-command 2>/var/tmp/legacy-warning || status=$?
+(( status == 1 ))
+[[ ! -s /var/tmp/legacy-command ]]
+grep -Fq 'hyprland-xr.conf is no longer read' /var/tmp/legacy-warning
+
+# Setup then writes the Lua default and keeps the .conf byte for byte.
+runuser -u builder -- env \
+  HOME=/home/builder \
+  XDG_CONFIG_HOME=/home/builder/.config \
+  HYPXRLAND_OMARCHY_TEMPLATE=/workspace/pkgbuilds/hypxrland-omarchy/hyprland-xr.lua \
+  bash /workspace/pkgbuilds/hypxrland-omarchy/omarchy-setup-hypxrland >/dev/null
+[[ -f $config_dir/hyprland-xr.lua ]]
+[[ $(sha256sum "$config_dir/hyprland-xr.conf" | cut -d' ' -f1) == "$legacy_sum" ]]
+runuser -u builder -- env \
+  HOME=/home/builder \
+  XDG_CONFIG_HOME=/home/builder/.config \
+  PATH="$mock_dir:/usr/bin" \
+  bash /workspace/pkgbuilds/hypxrland/hypxrland-session \
+  >/var/tmp/lua-command 2>/var/tmp/lua-warning
+grep -Fxq "$config_dir/hyprland-xr.lua" /var/tmp/lua-command
 
 fresh=/home/fresh
 mkdir -p "$fresh/.config"

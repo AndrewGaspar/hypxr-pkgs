@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=monado-xreal
-pkgver=25.1.0.20261102.1.g76c63baca
+pkgver=25.1.0.20261102.2.g6a22af15e
 pkgrel=1
 pkgdesc='HypXRland Monado runtime for XREAL Air displays'
 arch=('x86_64')
@@ -26,6 +26,8 @@ depends=(
   'systemd-libs'
   'vulkan-icd-loader'
   'wayland'
+  # The flight recorder writes stereo frames as zstd.
+  'zstd'
 )
 makedepends=(
   'cmake'
@@ -41,10 +43,13 @@ makedepends=(
   'vulkan-headers'
   'wayland-protocols'
 )
-optdepends=('xr-hardware: access rules for additional XR hardware')
+optdepends=(
+  'python: the flight-recorder helper scripts xreal-capture runs'
+  'xr-hardware: access rules for additional XR hardware'
+)
 options=('!debug')
 
-_commit=76c63baca9771d77c3455c3eff81a3cd3fd20402
+_commit=6a22af15e7e0be12b28db9f12071c20100fad476
 source=(
   "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
   'monado-xreal.service'
@@ -54,7 +59,7 @@ source=(
   'avoid-power-saver'
 )
 sha256sums=(
-  '6c4cfa27ab0b3dfe9edeeee2a927661bf29de6341ca3314e51c042813f0d1f69'
+  '62335f5baa70cd4c6d99706160f36e3a683be6a424a3750eea1102b7f2387216'
   '83a3053004e0732ea2008118305a0e1e830b56e8f7fc6fa4f07f069d1f59696e'
   '0018a8db6f14fe3a2199b82049d3a5b213f03f9e1c1e7e8a925d0dd6806cc063'
   '449fcaa72c86ad899ebb871b95a8605b574f5170c17379f2978c59180d7ae052'
@@ -134,6 +139,9 @@ check() {
   grep -q '^XRT_HAVE_WAYLAND:BOOL=ON$' build/CMakeCache.txt
   grep -q '^XRT_HAVE_SYSTEMD:BOOL=ON$' build/CMakeCache.txt
   grep -q '^XRT_FEATURE_SERVICE_SYSTEMD:BOOL=OFF$' build/CMakeCache.txt
+  # The flight recorder compresses frames with zstd (raw, 1.5x the I/O, without).
+  grep -q '^XREAL_AIR_ZSTD_FOUND:INTERNAL=1$' build/CMakeCache.txt
+  grep -qaF 'flight recorder' build/src/xrt/targets/service/monado-service
   grep -F '/usr/lib/monado-xreal/libopenxr_monado_xreal.so' \
     openxr_monado-xreal.json
   # No file capabilities: they would put the Vulkan loader in secure-execution
@@ -207,4 +215,10 @@ package() {
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE.stb-MIT"
   install -Dm644 "monado-$_commit/README.md" \
     "$pkgdir/usr/share/doc/$pkgname/README.md"
+  # xreal-capture (hypxrland) searches /usr/share/monado-xreal/scripts.
+  local script
+  for script in xreal-capture-to-euroc.py thread-cpu-log.py slam-timing-summary.py; do
+    install -Dm755 "monado-$_commit/scripts/$script" \
+      "$pkgdir/usr/share/monado-xreal/scripts/$script"
+  done
 }

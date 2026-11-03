@@ -2,13 +2,13 @@
 
 pkgname=hypxrland-stack
 pkgver=1.1.0
-pkgrel=6
+pkgrel=7
 pkgdesc='Complete HypXRland runtime stack for Arch Linux'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
 license=('MIT')
 depends=(
-  'hypxrland>=0.56.2.r455.ge3a89bc8c-1'
+  'hypxrland>=0.57.0.r482.g078acf7f6-1'
   'hypxrcompose>=0.20260820.1.gf75ccd4ec-5'
   'hypxrhud>=0.20260816.1.gf96d0e794-5'
   'hypxrpaper>=0.20260704.1.g5cae848cd-6'
