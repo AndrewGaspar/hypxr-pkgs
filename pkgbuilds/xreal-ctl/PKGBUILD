@@ -14,7 +14,7 @@
 # 70-xreal.rules.
 
 pkgname=xreal-ctl
-pkgver=0.20261103.1.g078acf7f6
+pkgver=0.20261103.2.g59d71e867
 pkgrel=1
 pkgdesc='Display mode and brightness control for XREAL Air glasses'
 arch=('x86_64')
@@ -34,9 +34,9 @@ makedepends=(
 optdepends=('monado-xreal: seat (uaccess) udev rules for the glasses')
 options=('!debug')
 
-_commit=078acf7f616d876655609f490216c5279c287b3c
+_commit=59d71e867ce494cbf5ccd3ffbd52dde284349f0a
 source=("hypxrland-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
-sha256sums=('426714f139f76bad0aedae44b559ba86b999f5d40adee15efa8d91006067cd44')
+sha256sums=('56e06b7dd44784c95f3058308fe3e69676bd65ab4848cc7679cda019b5101fbd')
 
 prepare() {
   # The device rules come from monado-xreal, not the fork's 70-xreal.rules,

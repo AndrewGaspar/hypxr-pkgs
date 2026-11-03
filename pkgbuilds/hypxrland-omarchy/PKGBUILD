@@ -17,7 +17,7 @@ depends=(
   'monado-xreal>=25.1.0.20261102.2.g6a22af15e-1'
   'omarchy>=4.5.0rc3'
   'omarchy<4.6'
-  'xreal-ctl>=0.20261103.1.g078acf7f6-1'
+  'xreal-ctl>=0.20261103.2.g59d71e867-1'
 )
 makedepends=('desktop-file-utils')
 source=(

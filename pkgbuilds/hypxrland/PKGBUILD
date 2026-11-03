@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrland
-pkgver=0.57.0.r482.g078acf7f6
+pkgver=0.57.0.r484.g59d71e867
 pkgrel=1
 pkgdesc='Hyprland-based spatial OpenXR compositor installed beside stable Hyprland'
 arch=('x86_64')
@@ -13,7 +13,10 @@ license=(
   'LGPL-2.1-or-later'
 )
 depends=(
-  'aquamarine>=0.15.0'
+  # aquamarine 0.16.0 stopped choosing max_bpc; the fork sets it from each
+  # monitor's bitdepth (upstream e0e9c8437) only when built against >= 0.16.0.
+  # Rebuild on every aquamarine soname bump (libaquamarine.so below pins it).
+  'aquamarine>=0.16.0'
   'libaquamarine.so'
   'cairo'
   'libgcc'
@@ -99,7 +102,7 @@ makedepends=(
 )
 options=('!debug')
 
-_commit=078acf7f616d876655609f490216c5279c287b3c
+_commit=59d71e867ce494cbf5ccd3ffbd52dde284349f0a
 _glaze_commit=b518eec7a22e56ffa238b072c07f47efa7cea97f
 _udis86_commit=5336633af70f3917760a6d441ff02d93477b0c86
 source=(
@@ -109,7 +112,7 @@ source=(
   'hypxrland-session'
   'README.package.md'
 )
-sha256sums=('426714f139f76bad0aedae44b559ba86b999f5d40adee15efa8d91006067cd44'
+sha256sums=('56e06b7dd44784c95f3058308fe3e69676bd65ab4848cc7679cda019b5101fbd'
             '0d108903feb443df316fb53eaec2fd6c1c6d96b368562ad830debc5c6c29c304'
             '2f459fafa19535ef1be417bf7614e4f92475e5787d7ba76df20287cc29d1b5a9'
             '2bdb687a24c7a4588e41db1ec5b4ad6ec951ab00715b7beafb2f01af6934f2e7'
@@ -130,8 +133,8 @@ build() {
   export GIT_COMMIT_MESSAGE="packaged HypXRland snapshot ${_commit:0:10}"
   export GIT_COMMIT_DATE=2026-11-03
   export GIT_DIRTY=clean
-  export GIT_TAG="v0.57.0-482-g${_commit:0:10}"
-  export GIT_COMMITS=8460
+  export GIT_TAG="v0.57.0-484-g${_commit:0:10}"
+  export GIT_COMMITS=8462
 
   cmake -S "Hyprland-$_commit" -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
@@ -147,6 +150,8 @@ build() {
 
   grep -q '^openxr_dep_FOUND:INTERNAL=1$' build/CMakeCache.txt
   grep -Eq '^HYPR_VULKAN_INCLUDE_DIR:PATH=/.*' build/CMakeCache.txt
+  # Configured against aquamarine >= 0.16.0, so the max_bpc call is compiled in.
+  grep -Eq '^aquamarine_dep_VERSION:INTERNAL=0\.(1[6-9]|[2-9][0-9])\.' build/CMakeCache.txt
   cmake --build build --target Hyprland hyprctl
 
   # xreal-capture looks for the private hyprctl at Fedora's libexec path; Arch

@@ -125,7 +125,7 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.57.0.r482.g078acf7f6-1'
+  'hypxrland>=0.57.0.r484.g59d71e867-1'
   'hypxrcompose>=0.20260820.1.gf75ccd4ec-5'
   'hypxrhud>=0.20260816.1.gf96d0e794-5'
   'hypxrpaper>=0.20260704.1.g5cae848cd-6'
@@ -323,7 +323,7 @@ xreal_commit=$(pkgbuild_value xreal-ctl '"$_commit"')
 [[ $(pkgbuild_value xreal-ctl '"${source[0]}"') == "$(pkgbuild_value hypxrland '"${source[0]}"')" ]]
 [[ $(pkgbuild_value xreal-ctl '"${sha256sums[0]}"') == "$(pkgbuild_value hypxrland '"${sha256sums[0]}"')" ]]
 (( $(pkgbuild_value xreal-ctl '"${#source[@]}"') == 1 ))
-[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261103.1.g${xreal_commit:0:9}" ]]
+[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261103.2.g${xreal_commit:0:9}" ]]
 [[ $(pkgbuild_value xreal-ctl '"$url"') == "$(pkgbuild_value hypxrland '"$url"')" ]]
 mapfile -t xreal_depends < <(pkgbuild_value xreal-ctl '"${depends[@]}"')
 [[ ${xreal_depends[*]} == "glibc hidapi" ]]
