@@ -23,6 +23,11 @@ concurrency:
 env:
   ARCH: x86_64
   MIRROR: edge
+  # The edge channel currently serves Omarchy 4 (stable 4.0.x): build it
+  # against Omarchy's stable ring, whose Arch snapshot still carries the
+  # hyprland 0.56 stack hypxrland is based on. Omarchy edge is 4.5 with
+  # hyprland 0.57.
+  OMARCHY_RING: stable
   RELEASE_ARTIFACT: hypxr-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:

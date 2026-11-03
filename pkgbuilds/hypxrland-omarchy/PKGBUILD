@@ -2,15 +2,22 @@
 
 pkgname=hypxrland-omarchy
 pkgver=1.1.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Omarchy XR session installed beside the stable Omarchy session'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
 license=('MIT')
+# XREAL Air glasses are the session's primary hardware: monado-xreal is their
+# runtime (user unit, OpenXR manifest, seat udev rules) and xreal-ctl is the HID
+# helper every 2D/3D desktop switch runs. Hard dependencies, because pacman
+# never installs optdepends. The floors are the builds this wave publishes:
+# monado-xreal -3 is the first whose unit creates its IPC socket directory.
 depends=(
   'hypxrland-stack'
+  'monado-xreal>=25.1.0.20261102.1.g76c63baca-1'
   'omarchy>=4.0.0'
   'omarchy<4.1'
+  'xreal-ctl>=0.20261102.1.ge3a89bc8c-1'
 )
 makedepends=('desktop-file-utils')
 source=(

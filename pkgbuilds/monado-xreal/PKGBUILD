@@ -1,7 +1,7 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=monado-xreal
-pkgver=25.1.0.20261016.1.g6e23edfb3
+pkgver=25.1.0.20261102.1.g76c63baca
 pkgrel=1
 pkgdesc='HypXRland Monado runtime for XREAL Air displays'
 arch=('x86_64')
@@ -19,6 +19,10 @@ depends=(
   'libxcb'
   'libxrandr'
   'mesa'
+  # The render thread asks rtkit for its bounded real-time priority over sd-bus.
+  'rtkit'
+  # busctl: the power-saver helper reads and sets power-profiles-daemon's profile.
+  'systemd'
   'systemd-libs'
   'vulkan-icd-loader'
   'wayland'
@@ -40,22 +44,31 @@ makedepends=(
 optdepends=('xr-hardware: access rules for additional XR hardware')
 options=('!debug')
 
-_commit=6e23edfb3132ebec89fcd1d791651871675f655f
+_commit=76c63baca9771d77c3455c3eff81a3cd3fd20402
 source=(
   "$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
   'monado-xreal.service'
   'openxr_monado-xreal.json'
-  '71-hypxr-xreal-ultra.rules'
+  '71-hypxr-xreal.rules'
+  'monado-xreal-avoid-power-saver.service'
+  'avoid-power-saver'
 )
 sha256sums=(
-  '655f72501c7615cb4952ac4925a6816a820affb9de9e1a6ff22006c82ec331ad'
-  'f2521bd19f92ef2bdd28ee06828900043e840f86e9f439c7f4a921ffdbeee385'
+  '6c4cfa27ab0b3dfe9edeeee2a927661bf29de6341ca3314e51c042813f0d1f69'
+  '83a3053004e0732ea2008118305a0e1e830b56e8f7fc6fa4f07f069d1f59696e'
   '0018a8db6f14fe3a2199b82049d3a5b213f03f9e1c1e7e8a925d0dd6806cc063'
-  '3782597be344cb6a0e802537434ddf62821f6c2600d2996b766c82548c40a930'
+  '449fcaa72c86ad899ebb871b95a8605b574f5170c17379f2978c59180d7ae052'
+  '8bfb3aea6bd1c64089dcf51ed76ca49e46460c2debf59a0d1343ada377f22219'
+  '09fc0ecbbc690760d7222aa6cd4c8bbbe3c70726f9082574853f0bdd81eb95d2'
 )
 
 build() {
   export CXXFLAGS="$CXXFLAGS -include cstdint"
+  # XRT_HAVE_SYSTEMD builds in sd-bus, which the render thread uses to ask
+  # rtkit for real-time priority (it compiles out without it). Socket
+  # activation and Monado's own unit files stay off: the package ships its
+  # own unit and no socket unit, so the IPC server's sd_listen_fds() finds
+  # nothing and it creates its socket as before.
   cmake -S "monado-$_commit" -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
@@ -90,6 +103,7 @@ build() {
     -DXRT_BUILD_DRIVER_XREAL_AIR=ON \
     -DXRT_BUILD_SAMPLES=OFF \
     -DXRT_FEATURE_DEBUG_GUI=OFF \
+    -DXRT_FEATURE_OPENXR_PLANE_DETECTION=OFF \
     -DXRT_FEATURE_RENDERDOC=OFF \
     -DXRT_FEATURE_SERVICE=ON \
     -DXRT_FEATURE_SERVICE_SYSTEMD=OFF \
@@ -101,7 +115,7 @@ build() {
     -DXRT_HAVE_LIBUDEV=ON \
     -DXRT_HAVE_OPENCV=OFF \
     -DXRT_HAVE_SYSTEM_CJSON=ON \
-    -DXRT_HAVE_SYSTEMD=OFF \
+    -DXRT_HAVE_SYSTEMD=ON \
     -DXRT_HAVE_WAYLAND=ON \
     -DXRT_HAVE_WAYLAND_DIRECT=ON \
     -DXRT_INSTALL_SYSTEMD_UNIT_FILES=OFF \
@@ -118,11 +132,49 @@ build() {
 check() {
   grep -q '^XRT_BUILD_DRIVER_XREAL_AIR:BOOL=ON$' build/CMakeCache.txt
   grep -q '^XRT_HAVE_WAYLAND:BOOL=ON$' build/CMakeCache.txt
+  grep -q '^XRT_HAVE_SYSTEMD:BOOL=ON$' build/CMakeCache.txt
+  grep -q '^XRT_FEATURE_SERVICE_SYSTEMD:BOOL=OFF$' build/CMakeCache.txt
   grep -F '/usr/lib/monado-xreal/libopenxr_monado_xreal.so' \
     openxr_monado-xreal.json
-  ! getcap build/src/xrt/targets/service/monado-service | grep -q .
-  grep -F 'ATTRS{idVendor}=="3318", ATTRS{idProduct}=="0426"' \
-    71-hypxr-xreal-ultra.rules
+  # No file capabilities: they would put the Vulkan loader in secure-execution
+  # mode. makepkg's errexit ignores a `! cmd` line, so test the captured
+  # output; the assignment fails the build if getcap itself fails.
+  local caps
+  caps=$(getcap build/src/xrt/targets/service/monado-service)
+  [[ -z $caps ]]
+  # rtkit, not a capability, grants the render thread its real-time priority:
+  # the service links libsystemd for sd-bus, and the OpenXR runtime library,
+  # loaded into every application, does not.
+  grep -qx 'Environment=XRT_COMPOSITOR_THREAD_REALTIME=true' monado-xreal.service
+  local needed
+  needed=$(readelf -d build/src/xrt/targets/service/monado-service)
+  [[ $needed == *'Shared library: [libsystemd.so.0]'* ]]
+  needed=$(readelf -d build/src/xrt/targets/openxr/libopenxr_monado_xreal.so)
+  [[ $needed != *'[libsystemd.so'* ]]
+  local product
+  for product in 0424 0426 0428 0432; do
+    grep -F "ATTRS{idVendor}==\"3318\", ATTRS{idProduct}==\"$product\", TAG+=\"uaccess\"" \
+      71-hypxr-xreal.rules
+  done
+  # The runtime stays out of app.slice, beside the compositor.
+  grep -qx 'Slice=session.slice' monado-xreal.service
+  # The runtime pulls the power-saver unit in without depending on it, and that
+  # unit is bound to the runtime, so its ExecStop= runs however the runtime
+  # ends. The helper fails open: with no PowerProfiles daemon (none is
+  # reachable here) both steps log and exit 0.
+  grep -qx 'Wants=monado-xreal-avoid-power-saver.service' monado-xreal.service
+  grep -qx 'BindsTo=monado-xreal.service' monado-xreal-avoid-power-saver.service
+  grep -qx 'ExecStart=/usr/lib/monado-xreal/avoid-power-saver enter' \
+    monado-xreal-avoid-power-saver.service
+  grep -qx 'ExecStop=/usr/lib/monado-xreal/avoid-power-saver leave' \
+    monado-xreal-avoid-power-saver.service
+  mkdir -p "$srcdir/avoid-power-saver-rt"
+  local step
+  for step in enter leave; do
+    RUNTIME_DIRECTORY="$srcdir/avoid-power-saver-rt" \
+      DBUS_SYSTEM_BUS_ADDRESS="unix:path=$srcdir/no-such-bus" \
+      timeout 30 ./avoid-power-saver "$step"
+  done
 }
 
 package() {
@@ -138,10 +190,14 @@ package() {
     "$pkgdir/usr/lib/monado-xreal/libmonado.so"
   install -Dm644 monado-xreal.service \
     "$pkgdir/usr/lib/systemd/user/monado-xreal.service"
+  install -Dm644 monado-xreal-avoid-power-saver.service \
+    "$pkgdir/usr/lib/systemd/user/monado-xreal-avoid-power-saver.service"
+  install -Dm755 avoid-power-saver \
+    "$pkgdir/usr/lib/monado-xreal/avoid-power-saver"
   install -Dm644 openxr_monado-xreal.json \
     "$pkgdir/usr/share/openxr/1/openxr_monado-xreal.json"
-  install -Dm644 71-hypxr-xreal-ultra.rules \
-    "$pkgdir/usr/lib/udev/rules.d/71-hypxr-xreal-ultra.rules"
+  install -Dm644 71-hypxr-xreal.rules \
+    "$pkgdir/usr/lib/udev/rules.d/71-hypxr-xreal.rules"
 
   install -Dm644 "monado-$_commit/LICENSE" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"

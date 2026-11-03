@@ -6,6 +6,9 @@
 # Setup directories
 ARCH=${ARCH:-x86_64}
 MIRROR=${MIRROR:-edge}
+# Omarchy ring for build-time dependencies (see bin/build); the image's Arch
+# mirror was chosen from the same ring.
+OMARCHY_RING=${OMARCHY_RING:-$MIRROR}
 DRY_RUN=${DRY_RUN:-false}
 PKGBUILDS_DIR=${PKGBUILDS_DIR:-/pkgbuilds}
 BUILD_OUTPUT_DIR=${BUILD_OUTPUT_DIR:-/build-output/$MIRROR/$ARCH}
@@ -69,16 +72,16 @@ EOF
     echo "  -> hypxr (priority 2): $FINAL_OUTPUT_DIR"
   fi
 
-  # HypXR is additive to Omarchy. Use the matching Omarchy ring for build-time
+  # HypXR is additive to Omarchy. Use the targeted Omarchy ring for build-time
   # dependencies such as omarchy-settings; never copy those packages into this
   # repository.
   sudo tee -a /etc/pacman.conf > /dev/null <<EOF
 
 [omarchy]
 SigLevel = Required DatabaseOptional
-Server = https://pkgs.omarchy.org/$MIRROR/\$arch
+Server = https://pkgs.omarchy.org/$OMARCHY_RING/\$arch
 EOF
-  echo "  -> omarchy (priority 3): https://pkgs.omarchy.org/$MIRROR/\$arch"
+  echo "  -> omarchy (priority 3): https://pkgs.omarchy.org/$OMARCHY_RING/\$arch"
 
   # Sync pacman database
   sudo pacman -Sy
@@ -87,6 +90,7 @@ fi
 echo "==> Package Builder"
 echo "==> Target architecture: $ARCH"
 echo "==> Mirror: $MIRROR"
+echo "==> Omarchy ring: $OMARCHY_RING"
 echo "==> Package root: $PKGBUILDS_DIR"
 echo "==> Build workspace: $BUILD_OUTPUT_DIR"
 echo "==> Final output: $FINAL_OUTPUT_DIR"

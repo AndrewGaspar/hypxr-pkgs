@@ -21,6 +21,7 @@ packages=(
   monado-xreal
   voxtype-hypxr
   wivrn-hypxr
+  xreal-ctl
 )
 
 for package in "${packages[@]}"; do
@@ -59,7 +60,8 @@ for package in \
   hypxrvoice \
   monado-xreal \
   voxtype-hypxr \
-  wivrn-hypxr; do
+  wivrn-hypxr \
+  xreal-ctl; do
   [[ $(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "${arch[*]}"') == "x86_64" ]]
 done
 
@@ -100,21 +102,22 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 # The aquamarine 0.15.0 (libaquamarine.so=14) rebuild of hypxrland re-versioned
 # the whole wave for that reason.
 declare -A expected_pkgrel=(
-  [hyprpad]=1
-  [hypxr-keyring]=5
-  [hypxrcompose]=4
-  [hypxrhud]=4
+  [hyprpad]=2
+  [hypxr-keyring]=6
+  [hypxrcompose]=5
+  [hypxrhud]=5
   [hypxrland]=1
-  [hypxrland-legacy-config]=4
-  [hypxrland-omarchy]=4
-  [hypxrland-stack]=5
-  [hypxrpaper]=5
-  [hypxrva]=5
-  [hypxrvoice]=4
-  [hypxrvoice-model-base-en]=5
+  [hypxrland-legacy-config]=5
+  [hypxrland-omarchy]=5
+  [hypxrland-stack]=6
+  [hypxrpaper]=6
+  [hypxrva]=6
+  [hypxrvoice]=5
+  [hypxrvoice-model-base-en]=6
   [monado-xreal]=1
-  [voxtype-hypxr]=3
-  [wivrn-hypxr]=4
+  [voxtype-hypxr]=4
+  [wivrn-hypxr]=5
+  [xreal-ctl]=1
 )
 for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
@@ -122,14 +125,14 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r434.g9097b3c02-1'
-  'hypxrcompose>=0.20260820.1.gf75ccd4ec-4'
-  'hypxrhud>=0.20260816.1.gf96d0e794-4'
-  'hypxrpaper>=0.20260704.1.g5cae848cd-5'
-  'hypxrva>=0.20260803.1.gbba2c5f8b-5'
-  'hypxrvoice>=0.20260812.1.g7ce7d33b2-4'
-  'hypxrvoice-model-base-en>=1.0.0-5'
-  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-4'
+  'hypxrland>=0.56.2.r455.ge3a89bc8c-1'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-5'
+  'hypxrhud>=0.20260816.1.gf96d0e794-5'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-6'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-6'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-5'
+  'hypxrvoice-model-base-en>=1.0.0-6'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-5'
 )
 mapfile -t actual_stack_deps < <(
   cd pkgbuilds/hypxrland-stack
@@ -180,7 +183,7 @@ for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
 done
 
 legacy_package=pkgbuilds/hypxrland-legacy-config
-[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-4" ]]
+[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-5" ]]
 mapfile -t legacy_dependencies < <(
   cd "$legacy_package"
   bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
@@ -206,6 +209,127 @@ rg -q "'omarchy>=4\.0\.0'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'omarchy<4\.1'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'hypxrland-stack'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD
+rg -qF '`hypxrland-omarchy` also installs `monado-xreal`' pkgbuilds/hypxrland-stack/README.md
+
+# pacman never installs optdepends, so the XR session hard-depends on the XREAL
+# runtime and the 2D/3D helper, at the builds this wave publishes.
+mapfile -t session_depends < <(
+  cd pkgbuilds/hypxrland-omarchy
+  bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
+)
+for package in monado-xreal xreal-ctl; do
+  wave_version=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"')
+  printf '%s\n' "${session_depends[@]}" | grep -Fxq "$package>=$wave_version"
+done
+session_optdepends=$(cd pkgbuilds/hypxrland-omarchy && bash -c 'source PKGBUILD; printf "%s" "${optdepends[*]:-}"')
+[[ -z $session_optdepends ]]
+# The socket lives in monado-xreal/, which only the unit creates.
+rg -qF -- '-DXRT_IPC_MSG_SOCK_FILENAME=monado-xreal/comp_ipc' pkgbuilds/monado-xreal/PKGBUILD
+rg -qx 'RuntimeDirectory=monado-xreal' pkgbuilds/monado-xreal/monado-xreal.service
+rg -qx 'RuntimeDirectoryMode=0700' pkgbuilds/monado-xreal/monado-xreal.service
+# The tracker's CPU share and oomd preference; user@.service delegates only
+# pids, memory and cpu, so an IOWeight= would do nothing.
+rg -qx 'CPUWeight=1000' pkgbuilds/monado-xreal/monado-xreal.service
+rg -qx 'ManagedOOMPreference=avoid' pkgbuilds/monado-xreal/monado-xreal.service
+if rg -q '^IOWeight=' pkgbuilds/monado-xreal/monado-xreal.service; then
+  echo "FAIL: monado-xreal.service sets IOWeight=, but io is not delegated" >&2
+  exit 1
+fi
+# omedora#15: out of app.slice (uresourced resets CPUWeight= there on Fedora),
+# beside the compositor in session.slice.
+(( $(rg -c '^Slice=' pkgbuilds/monado-xreal/monado-xreal.service) == 1 ))
+rg -qx 'Slice=session.slice' pkgbuilds/monado-xreal/monado-xreal.service
+# The render thread takes a bounded real-time priority from rtkit over sd-bus,
+# which XRT_HAVE_SYSTEMD builds in; socket activation and Monado's own unit
+# files stay off, and check() proves only the service links libsystemd.
+rg -qx 'Environment=XRT_COMPOSITOR_THREAD_REALTIME=true' \
+  pkgbuilds/monado-xreal/monado-xreal.service
+rg -qxF -- '    -DXRT_HAVE_SYSTEMD=ON \' pkgbuilds/monado-xreal/PKGBUILD
+rg -qxF -- '    -DXRT_FEATURE_SERVICE_SYSTEMD=OFF \' pkgbuilds/monado-xreal/PKGBUILD
+rg -qxF -- '    -DXRT_INSTALL_SYSTEMD_UNIT_FILES=OFF \' pkgbuilds/monado-xreal/PKGBUILD
+monado_check=$(sed -n '/^check() {/,/^}/p' pkgbuilds/monado-xreal/PKGBUILD)
+grep -qxF "  grep -q '^XRT_HAVE_SYSTEMD:BOOL=ON\$' build/CMakeCache.txt" <<<"$monado_check"
+grep -qxF "  grep -qx 'Environment=XRT_COMPOSITOR_THREAD_REALTIME=true' monado-xreal.service" \
+  <<<"$monado_check"
+grep -qxF '  needed=$(readelf -d build/src/xrt/targets/service/monado-service)' <<<"$monado_check"
+grep -qxF "  [[ \$needed == *'Shared library: [libsystemd.so.0]'* ]]" <<<"$monado_check"
+grep -qxF '  needed=$(readelf -d build/src/xrt/targets/openxr/libopenxr_monado_xreal.so)' \
+  <<<"$monado_check"
+grep -qxF "  [[ \$needed != *'[libsystemd.so'* ]]" <<<"$monado_check"
+
+# Every local source file matches the checksum its PKGBUILD pins.
+for package in "${packages[@]}"; do
+  while IFS=$'\t' read -r algorithm file sum; do
+    [[ $sum == "SKIP" ]] && continue
+    if [[ $("${algorithm}sum" "pkgbuilds/$package/$file" | cut -d' ' -f1) != "$sum" ]]; then
+      echo "FAIL: $package/$file does not match its ${algorithm}sums entry" >&2
+      exit 1
+    fi
+  done < <(
+    cd "pkgbuilds/$package"
+    bash -c '
+      source PKGBUILD
+      if (( ${#sha512sums[@]} )); then
+        algorithm=sha512
+        sums=("${sha512sums[@]}")
+      else
+        algorithm=sha256
+        sums=("${sha256sums[@]}")
+      fi
+      for ((i = 0; i < ${#source[@]}; i++)); do
+        [[ ${source[i]} == *://* ]] && continue
+        printf "%s\t%s\t%s\n" "$algorithm" "${source[i]}" "${sums[i]}"
+      done
+    '
+  )
+done
+
+# No Arch or Omarchy repository ships uaccess rules for XREAL glasses
+# (xr-hardware is AUR-only), so monado-xreal's rule must cover every model
+# xreal-ctl and the runtime drive, the hidraw nodes included.
+xreal_rules=pkgbuilds/monado-xreal/71-hypxr-xreal.rules
+[[ ! -e pkgbuilds/monado-xreal/71-hypxr-xreal-ultra.rules ]]
+for product in 0424 0426 0428 0432; do
+  rg -qxF "ATTRS{idVendor}==\"3318\", ATTRS{idProduct}==\"$product\", TAG+=\"uaccess\", ENV{ID_xrhardware}=\"1\"" \
+    "$xreal_rules"
+done
+(( $(rg -c '^ATTRS' "$xreal_rules") == 4 ))
+rg -qF '/usr/lib/udev/rules.d/71-hypxr-xreal.rules' pkgbuilds/monado-xreal/PKGBUILD
+
+# xreal-ctl builds contrib/xreal from the archive hypxrland already pins, so a
+# hypxrland bump must carry it along: same commit, same file name, same sha.
+pkgbuild_value() { # <package> <expression>
+  (cd "pkgbuilds/$1" && bash -c "source PKGBUILD; printf '%s\n' $2")
+}
+xreal_commit=$(pkgbuild_value xreal-ctl '"$_commit"')
+[[ -n $xreal_commit && $xreal_commit == "$(pkgbuild_value hypxrland '"$_commit"')" ]]
+[[ $(pkgbuild_value xreal-ctl '"${source[0]}"') == "$(pkgbuild_value hypxrland '"${source[0]}"')" ]]
+[[ $(pkgbuild_value xreal-ctl '"${sha256sums[0]}"') == "$(pkgbuild_value hypxrland '"${sha256sums[0]}"')" ]]
+(( $(pkgbuild_value xreal-ctl '"${#source[@]}"') == 1 ))
+[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261102.1.g${xreal_commit:0:9}" ]]
+[[ $(pkgbuild_value xreal-ctl '"$url"') == "$(pkgbuild_value hypxrland '"$url"')" ]]
+mapfile -t xreal_depends < <(pkgbuild_value xreal-ctl '"${depends[@]}"')
+[[ ${xreal_depends[*]} == "glibc hidapi" ]]
+rg -qF 'make -C "Hyprland-$_commit/contrib/xreal"' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF '$LDFLAGS' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF '"$pkgdir/usr/bin/xreal-ctl"' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF 'usage: xreal-ctl mode 2d|3d' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF '"$ctl" detect' pkgbuilds/xreal-ctl/PKGBUILD
+rg -qF "Is monado-xreal (its udev rules) installed?" pkgbuilds/xreal-ctl/PKGBUILD
+
+# makepkg's errexit ignores a `! cmd` line, so such a check can never fail.
+no_bare_negation_in_check() { # <package>
+  if sed -n '/^check() {/,/^}/p' "pkgbuilds/$1/PKGBUILD" | grep -qE '^[[:space:]]*! '; then
+    echo "FAIL: $1 check() has a bare negated command, which never fails the build" >&2
+    exit 1
+  fi
+}
+no_bare_negation_in_check xreal-ctl
+no_bare_negation_in_check monado-xreal
+sed -n '/^check() {/,/^}/p' pkgbuilds/monado-xreal/PKGBUILD |
+  grep -qxF '  caps=$(getcap build/src/xrt/targets/service/monado-service)'
+sed -n '/^check() {/,/^}/p' pkgbuilds/monado-xreal/PKGBUILD |
+  grep -qxF '  [[ -z $caps ]]'
 
 rg -q '^Name=Omarchy XR$' pkgbuilds/hypxrland-omarchy/omarchy-xr.desktop
 rg -q '^Exec=/usr/bin/omarchy-xr-session$' \
@@ -287,5 +411,150 @@ grep -Fxq "$legacy_tmp/config/hypr/hyprland-xr.lua" "$legacy_tmp/lua-command"
 rg -Fq 'require("hyprland")' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
 rg -Fq 'openxr = {' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
 rg -Fq 'hl.on("hyprland.start"' pkgbuilds/hypxrland-omarchy/hyprland-xr.lua
+
+# The power profile is monado-xreal's business (below); the XR session starts
+# nothing of its own.
+[[ ! -e pkgbuilds/hypxrland-omarchy/performance-hold ]]
+if rg -qi 'performance.hold|PERFORMANCE_HOLD|power-saver|setsid|python' \
+  pkgbuilds/hypxrland-omarchy/omarchy-xr-session pkgbuilds/hypxrland-omarchy/PKGBUILD; then
+  echo "FAIL: the XR session must not handle the power profile itself" >&2
+  exit 1
+fi
+rg -qF 'systemctl --user mask monado-xreal-avoid-power-saver.service' \
+  pkgbuilds/hypxrland-stack/README.md
+
+# monado-xreal keeps the runtime off power-saver while it runs (omedora#14), a
+# stopgap until Monado runs well without turbo: the runtime pulls the unit in
+# with Wants=, and the unit is a oneshot bound to the runtime, so its
+# ExecStop= restores the profile however the runtime ends.
+runtime_unit=pkgbuilds/monado-xreal/monado-xreal.service
+avoid_unit=pkgbuilds/monado-xreal/monado-xreal-avoid-power-saver.service
+avoid_helper=pkgbuilds/monado-xreal/avoid-power-saver
+rg -qx 'Wants=monado-xreal-avoid-power-saver.service' "$runtime_unit"
+if rg -q '^(Requires|Requisite|BindsTo|After|Upholds)=.*avoid-power-saver' "$runtime_unit"; then
+  echo "FAIL: monado-xreal.service must never depend on or wait for the unit" >&2
+  exit 1
+fi
+(( $(grep -v '^#' "$runtime_unit" | grep -c 'avoid-power-saver') == 1 ))
+rg -qx 'BindsTo=monado-xreal.service' "$avoid_unit"
+rg -qx 'After=monado-xreal.service' "$avoid_unit"
+rg -qx 'Type=oneshot' "$avoid_unit"
+rg -qx 'RemainAfterExit=yes' "$avoid_unit"
+rg -qx 'RuntimeDirectory=monado-xreal-avoid-power-saver' "$avoid_unit"
+rg -qx 'ExecStart=/usr/lib/monado-xreal/avoid-power-saver enter' "$avoid_unit"
+rg -qx 'ExecStop=/usr/lib/monado-xreal/avoid-power-saver leave' "$avoid_unit"
+if rg -q '^\[Install\]' "$avoid_unit"; then
+  echo "FAIL: the power-saver unit has no [Install]; only the runtime pulls it in" >&2
+  exit 1
+fi
+[[ -x $avoid_helper ]]
+[[ $(head -1 "$avoid_helper") == "#!/bin/bash" ]]
+if [[ -e pkgbuilds/monado-xreal/performance-hold \
+  || -e pkgbuilds/monado-xreal/monado-xreal-performance-hold.service ]] \
+  || rg -q 'performance-hold|python-gobject' pkgbuilds/monado-xreal/PKGBUILD; then
+  echo "FAIL: monado-xreal no longer ships the performance hold" >&2
+  exit 1
+fi
+mapfile -t runtime_depends < <(
+  cd pkgbuilds/monado-xreal
+  bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
+)
+# busctl, which the helper uses, is in systemd.
+printf '%s\n' "${runtime_depends[@]}" | grep -Fxq systemd
+# The render thread's real-time priority comes from rtkit, over sd-bus.
+printf '%s\n' "${runtime_depends[@]}" | grep -Fxq rtkit
+printf '%s\n' "${runtime_depends[@]}" | grep -Fxq systemd-libs
+if printf '%s\n' "${runtime_depends[@]}" | grep -Fxq -e python -e python-gobject; then
+  echo "FAIL: monado-xreal no longer needs python or python-gobject at run time" >&2
+  exit 1
+fi
+rg -qF '"$pkgdir/usr/lib/systemd/user/monado-xreal-avoid-power-saver.service"' \
+  pkgbuilds/monado-xreal/PKGBUILD
+rg -qF '"$pkgdir/usr/lib/monado-xreal/avoid-power-saver"' pkgbuilds/monado-xreal/PKGBUILD
+
+# The helper itself, against a stub busctl standing in for power-profiles-daemon:
+# enter switches only power-saver to balanced; leave restores power-saver only
+# when enter switched and the profile is still balanced; failures log, exit 0.
+avoid_tmp="$setup_tmp/avoid-power-saver"
+mkdir -p "$avoid_tmp/bin" "$avoid_tmp/rt" "$avoid_tmp/pp"
+cat >"$avoid_tmp/bin/busctl" <<'EOF_BUSCTL'
+#!/bin/bash
+d=$FAKE_PP
+args=()
+for a in "$@"; do
+  [[ $a == --system || $a == --timeout=* ]] || args+=("$a")
+done
+[[ ${args[1]} == org.freedesktop.UPower.PowerProfiles ]] || exit 1
+if [[ -e $d/no-daemon ]]; then
+  echo "Could not activate remote peer" >&2
+  exit 1
+fi
+case ${args[0]}:${args[4]} in
+  get-property:ActiveProfile) echo "s \"$(<"$d/active")\"" ;;
+  get-property:ActiveProfileHolds) cat "$d/holds" ;;
+  set-property:ActiveProfile)
+    if [[ -e $d/refuse ]]; then echo "Unauthorized" >&2; exit 1; fi
+    printf '%s\n' "${args[6]}" >"$d/active"
+    echo set >>"$d/sets" ;;
+  *) exit 1 ;;
+esac
+EOF_BUSCTL
+chmod 0755 "$avoid_tmp/bin/busctl"
+export FAKE_PP="$avoid_tmp/pp"
+avoid_reset() { # <profile>
+  rm -f "$FAKE_PP"/* "$avoid_tmp/rt"/*
+  printf '%s\n' "$1" >"$FAKE_PP/active"
+  echo 'aa{sv} 0' >"$FAKE_PP/holds"
+  : >"$FAKE_PP/sets"
+}
+avoid_run() { # <step>
+  PATH="$avoid_tmp/bin:$PATH" RUNTIME_DIRECTORY="$avoid_tmp/rt" \
+    timeout 20 "$avoid_helper" "$1" 2>/dev/null
+}
+avoid_state() { printf '%s:%s' "$(<"$FAKE_PP/active")" "$(wc -l <"$FAKE_PP/sets")"; }
+
+avoid_status=0
+avoid_run hold || avoid_status=$?
+(( avoid_status == 2 ))
+avoid_reset power-saver
+avoid_run enter
+[[ $(avoid_state) == balanced:1 && -e $avoid_tmp/rt/switched-to-balanced ]]
+avoid_run leave
+[[ $(avoid_state) == power-saver:2 && ! -e $avoid_tmp/rt/switched-to-balanced ]]
+for profile in balanced performance; do
+  avoid_reset "$profile"
+  avoid_run enter
+  avoid_run leave
+  [[ $(avoid_state) == "$profile:0" ]]
+done
+avoid_reset power-saver
+avoid_run enter
+echo performance >"$FAKE_PP/active"
+avoid_run leave
+[[ $(avoid_state) == performance:1 ]]
+avoid_reset power-saver
+echo 'aa{sv} 1 3 "Profile" s "power-saver" "Reason" s "low battery" "ApplicationId" s "x"' >"$FAKE_PP/holds"
+avoid_run enter
+[[ $(avoid_state) == power-saver:0 ]]
+avoid_reset power-saver
+: >"$FAKE_PP/refuse"
+avoid_run enter
+[[ $(avoid_state) == power-saver:0 && ! -e $avoid_tmp/rt/switched-to-balanced ]]
+avoid_reset power-saver
+: >"$FAKE_PP/no-daemon"
+avoid_run enter
+avoid_reset power-saver
+avoid_run enter
+: >"$FAKE_PP/no-daemon"
+avoid_run leave
+avoid_reset power-saver
+PATH="$avoid_tmp/bin:$PATH" RUNTIME_DIRECTORY= "$avoid_helper" enter 2>/dev/null
+[[ $(avoid_state) == power-saver:0 ]]
+avoid_output=$(RUNTIME_DIRECTORY="$avoid_tmp/rt" \
+  DBUS_SYSTEM_BUS_ADDRESS="unix:path=$setup_tmp/no-such-bus" \
+  timeout 20 "$avoid_helper" enter 2>&1)
+[[ $avoid_output == *"cannot read the active power profile"* ]]
+unset FAKE_PP
+no_bare_negation_in_check monado-xreal
 
 echo "Package-wave checks passed"

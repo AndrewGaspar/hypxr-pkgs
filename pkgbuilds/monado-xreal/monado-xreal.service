@@ -3,11 +3,37 @@ Description=Monado XREAL Air OpenXR runtime for HypXRland
 Documentation=https://github.com/AndrewGaspar/Hyprland
 After=graphical-session.target
 PartOf=graphical-session.target
+# Temporary: keep the runtime off the power-saver profile while it runs (see
+# hypxrland-stack's README). Mask monado-xreal-avoid-power-saver.service to opt out.
+Wants=monado-xreal-avoid-power-saver.service
 
 [Service]
 Type=simple
 Environment=XRT_COMPOSITOR_FORCE_WAYLAND=1
 Environment=XRT_NO_STDIN=1
+# Run the compositor's render thread at a bounded real-time priority (SCHED_RR
+# 10) granted by rtkit, so no file capabilities are needed. If rtkit refuses
+# (and no RLIMIT_RTPRIO allows it), the runtime logs one warning and runs at
+# normal priority.
+Environment=XRT_COMPOSITOR_THREAD_REALTIME=true
+# The build moves the IPC socket to $XDG_RUNTIME_DIR/monado-xreal/comp_ipc and
+# Monado never creates that directory. systemd creates it on start and removes
+# it on stop, which also clears the socket the SIGKILL stop leaves behind.
+RuntimeDirectory=monado-xreal
+RuntimeDirectoryMode=0700
+# Run beside the compositor in session.slice (uwsm puts it there), not in
+# app.slice, as on Fedora, where uresourced manages every unit in app.slice
+# and resets its CPUWeight=.
+Slice=session.slice
+# Win CPU against the rest of the session: 6DoF tracking takes more than a core
+# and stutters under background load. user@.service delegates the cpu
+# controller, so the weight applies. There is no IOWeight=: user@.service
+# delegates only pids, memory and cpu.
+CPUWeight=1000
+# Omarchy lets systemd-oomd kill only in app.slice, so in session.slice the
+# runtime, like the compositor, is never its candidate. The preference covers
+# setups whose oomd also watches session.slice, as Fedora's defaults do.
+ManagedOOMPreference=avoid
 ExecStart=/usr/lib/monado-xreal/monado-service
 Restart=no
 KillSignal=SIGKILL

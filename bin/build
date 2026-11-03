@@ -76,9 +76,19 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# The Omarchy ring the packages build against: its Arch snapshot mirror and
+# its pkgs.omarchy.org repository. Defaults to the HypXR channel's own name;
+# OMARCHY_RING=stable builds the edge channel for Omarchy's stable release.
+OMARCHY_RING=${OMARCHY_RING:-$MIRROR}
+if [[ "$OMARCHY_RING" != "edge" && "$OMARCHY_RING" != "stable" ]]; then
+  print_error "Invalid OMARCHY_RING: $OMARCHY_RING (must be 'edge' or 'stable')"
+  exit 1
+fi
+
 # Show target architecture and mirror after parsing args
 print_info "Target architecture: $ARCH"
 print_info "Mirror: $MIRROR"
+print_info "Omarchy ring: $OMARCHY_RING"
 print_info "Build workspace: $BUILD_OUTPUT_DIR"
 print_info "Final output: $REPO_DIR"
 
@@ -86,6 +96,7 @@ if [[ "$DRY_RUN" == true ]]; then
   print_warning "DRY RUN MODE - build plan only; no Docker or makepkg will run"
   ARCH="$ARCH" \
     MIRROR="$MIRROR" \
+    OMARCHY_RING="$OMARCHY_RING" \
     PACKAGES="$PACKAGES" \
     DRY_RUN=true \
     PKGBUILDS_DIR="$PKGBUILDS_DIR" \
@@ -125,7 +136,7 @@ else
 fi
 
 # Build/update the Docker image
-build_docker_image "$BUILD_DIR" "$ARCH" "$MIRROR"
+build_docker_image "$BUILD_DIR" "$ARCH" "$OMARCHY_RING"
 
 print_info "Running package build..."
 
@@ -142,6 +153,7 @@ DOCKER_ARGS=(
   --rm
   -e ARCH="$ARCH"
   -e MIRROR="$MIRROR"
+  -e OMARCHY_RING="$OMARCHY_RING"
   -e PACKAGES="$PACKAGES"
   -e TMPDIR=/var/tmp
   -v "$BUILD_ROOT/build-output:/build-output"
@@ -152,7 +164,7 @@ DOCKER_ARGS=(
 )
 
 # Run the builder with assembled args
-IMAGE_TAG="hypxr-pkg-builder:latest-$ARCH-$MIRROR"
+IMAGE_TAG="hypxr-pkg-builder:latest-$ARCH-$OMARCHY_RING"
 PLATFORM_ARG=$(get_platform_arg "$ARCH")
 
 docker run $PLATFORM_ARG "${DOCKER_ARGS[@]}" "$IMAGE_TAG" /build/build.sh

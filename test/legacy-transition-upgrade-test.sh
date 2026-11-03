@@ -4,7 +4,8 @@ set -euo pipefail
 
 ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
 CANDIDATE_DIR=${1:-$ROOT/build-output/edge/x86_64}
-IMAGE=${HYPXR_TEST_IMAGE:-hypxr-pkg-builder:latest-x86_64-edge}
+# bin/build tags its image by the Omarchy ring the wave was built against.
+IMAGE=${HYPXR_TEST_IMAGE:-hypxr-pkg-builder:latest-x86_64-${OMARCHY_RING:-edge}}
 OLD_VERSION=3.8.4-3
 OLD_FILENAME="hypxrland-legacy-config-$OLD_VERSION-any.pkg.tar.zst"
 

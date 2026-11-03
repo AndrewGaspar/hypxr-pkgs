@@ -18,4 +18,30 @@ The session refuses to start without a readable config and never falls through
 to the normal Omarchy configuration.
 
 WiVRn pairing, GPU/render-node selection, and device-specific runtime settings
-remain per-user state. The XREAL-specific `monado-xreal` package is optional.
+remain per-user state. `hypxrland-omarchy` also installs `monado-xreal`, the
+XREAL Air runtime, and `xreal-ctl`, which switches the glasses between 2D and
+3D side-by-side for the desktop. The stack alone only suggests `monado-xreal`.
+
+While the XREAL runtime runs, `monado-xreal` keeps it off the `power-saver`
+power profile, which turns turbo off, because 6DoF tracking needs turbo.
+`monado-xreal.service` pulls in `monado-xreal-avoid-power-saver.service`: if the
+active profile is `power-saver`, it switches to `balanced`, and when the runtime
+stops, crashes or is killed it switches back, unless the profile was changed in
+the meantime. `balanced`, `performance` and a `power-saver` another application
+holds are left alone, and it checks only when the runtime starts. It does not
+ask for `performance`: on a laptop whose CPU and GPU share one power limit,
+`performance` keeps every core at full clock and the GPU throttles to its
+minimum, while `balanced` keeps turbo and leaves power for the GPU. Whether
+`performance` helps on AC power or with a discrete GPU is untested. This is a
+stopgap until Monado performs well without turbo. It never blocks the runtime:
+with no daemon or no polkit grant, the helper logs why (`journalctl --user -u
+monado-xreal-avoid-power-saver.service`) and exits. To turn it off, run
+`systemctl --user mask monado-xreal-avoid-power-saver.service`.
+
+The runtime's compositor render thread runs at a bounded real-time priority
+(`SCHED_RR` 10) that `rtkit` grants, so the service binary needs no file
+capabilities, which would stop the Vulkan loader from selecting the GPU. If
+`rtkit` refuses and no `RLIMIT_RTPRIO` allows it either, the runtime logs one
+warning (`journalctl --user -u monado-xreal.service`) and runs at normal
+priority. To turn it off, set `XRT_COMPOSITOR_THREAD_REALTIME=false` in a
+drop-in (`systemctl --user edit monado-xreal.service`).
