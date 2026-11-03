@@ -8,9 +8,12 @@ legacy_config="$config_dir/hyprland-xr.conf"
 
 if [[ -r $lua_config ]]; then
   config=$lua_config
-elif [[ ! -e $lua_config && ! -L $lua_config && -r $legacy_config ]]; then
-  config=$legacy_config
-  echo "hypxrland-session: legacy hyprland-xr.conf is deprecated; migrate it to hyprland-xr.lua" >&2
+elif [[ -r $legacy_config ]]; then
+  # Hyprland 0.57 reads Lua configs only.
+  echo "hypxrland-session: $legacy_config is no longer read; HypXRland 0.57 needs Lua." >&2
+  echo "Port it to $lua_config (see /usr/share/doc/hypxrland/12-porting-to-0.57.md)," >&2
+  echo "or run omarchy-setup-hypxrland for the default XR config." >&2
+  exit 1
 else
   echo "hypxrland-session: XR configuration is not readable: $lua_config" >&2
   echo "Run omarchy-setup-hypxrland or create the file before starting the XR session." >&2

@@ -40,8 +40,8 @@ rg -q 'build_docker_image "\$BUILD_DIR" "\$ARCH" "\$OMARCHY_RING"' bin/build ||
   fail "builder image's Arch mirror does not follow OMARCHY_RING"
 rg -q -- '-e OMARCHY_RING="\$OMARCHY_RING"' bin/build ||
   fail "builder does not pass OMARCHY_RING into the container"
-rg -q '^  OMARCHY_RING: stable$' .github/workflows/packages.yml ||
-  fail "edge wave does not build against Omarchy stable"
+rg -q '^  OMARCHY_RING: edge$' .github/workflows/packages.yml ||
+  fail "the 4.5 wave does not build against Omarchy edge"
 
 rg -q 'sign-database' bin/release || fail "release does not sign databases"
 rg -q 'hypxr\.db\.tar\.zst\.sig' build/sign-database.sh ||

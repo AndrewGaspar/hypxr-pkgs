@@ -1,8 +1,8 @@
 # Maintainer: Andrew Gaspar
 
 pkgname=hypxrland-omarchy
-pkgver=1.1.0
-pkgrel=5
+pkgver=1.2.0
+pkgrel=1
 pkgdesc='Omarchy XR session installed beside the stable Omarchy session'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
@@ -14,10 +14,10 @@ license=('MIT')
 # monado-xreal -3 is the first whose unit creates its IPC socket directory.
 depends=(
   'hypxrland-stack'
-  'monado-xreal>=25.1.0.20261102.1.g76c63baca-1'
-  'omarchy>=4.0.0'
-  'omarchy<4.1'
-  'xreal-ctl>=0.20261102.1.ge3a89bc8c-1'
+  'monado-xreal>=25.1.0.20261102.2.g6a22af15e-1'
+  'omarchy>=4.5.0rc3'
+  'omarchy<4.6'
+  'xreal-ctl>=0.20261103.2.g59d71e867-1'
 )
 makedepends=('desktop-file-utils')
 source=(
@@ -30,7 +30,7 @@ source=(
 sha256sums=(
   'cc75fe4c50416b9697f71970a691cb08ae9854d45515b8a5076b388d490d6e10'
   '6b866ffa1586ce70a0c46de0b724fa4e6b69f9b3f5024800e545b802ec043f60'
-  '9740907c9bfe613e8271dc48840c77218cfa0ccdfaca062910ac3b2bbd133908'
+  '85bb28fd2fc2c6996cbcde5c556c0115be3d0f39a4590c532549fd84cd83d699'
   '65fb0fb1159451aa6634dca1852768c8c8315c27cf04681f18e3bd280154e2a9'
   '74d049fa7a0860aa2985a167b21c407e49c70eebf665813be444a7da2a16f0fe'
 )

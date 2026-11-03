@@ -108,8 +108,8 @@ declare -A expected_pkgrel=(
   [hypxrhud]=5
   [hypxrland]=1
   [hypxrland-legacy-config]=5
-  [hypxrland-omarchy]=5
-  [hypxrland-stack]=6
+  [hypxrland-omarchy]=1
+  [hypxrland-stack]=7
   [hypxrpaper]=6
   [hypxrva]=6
   [hypxrvoice]=5
@@ -125,7 +125,7 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r455.ge3a89bc8c-1'
+  'hypxrland>=0.57.0.r484.g59d71e867-1'
   'hypxrcompose>=0.20260820.1.gf75ccd4ec-5'
   'hypxrhud>=0.20260816.1.gf96d0e794-5'
   'hypxrpaper>=0.20260704.1.g5cae848cd-6'
@@ -205,8 +205,25 @@ for package in "${packages[@]}"; do
   fi
 done
 
-rg -q "'omarchy>=4\.0\.0'" pkgbuilds/hypxrland-omarchy/PKGBUILD
-rg -q "'omarchy<4\.1'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+# HypXRland 0.57 targets Omarchy 4.5 (hyprland 0.57, Lua-only configs).
+rg -q "'omarchy>=4\.5\.0rc3'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+rg -q "'omarchy<4\.6'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+rg -q "'hyprland>=0\.57\.0'" pkgbuilds/hypxrland/PKGBUILD
+rg -q "'hyprland<0\.58'" pkgbuilds/hypxrland/PKGBUILD
+# 0.57 reads Lua only: neither the session nor setup falls back to a .conf.
+if rg -q 'config=\$legacy_config' pkgbuilds/hypxrland/hypxrland-session; then
+  echo "FAIL: hypxrland-session still starts a legacy .conf" >&2
+  exit 1
+fi
+if sed -n '/legacy_config ]]; then/,/^fi/p' pkgbuilds/hypxrland-omarchy/omarchy-setup-hypxrland | rg -q 'exit 0'; then
+  echo "FAIL: omarchy-setup-hypxrland skips the Lua config for a legacy .conf" >&2
+  exit 1
+fi
+# xreal-capture (flight recorder CLI) ships with the compositor, pointed at
+# Arch's private hyprctl; Monado's helper scripts land where it searches.
+rg -qF '"$pkgdir/usr/bin/xreal-capture"' pkgbuilds/hypxrland/PKGBUILD
+rg -qF '"$pkgdir/usr/share/monado-xreal/scripts/$script"' pkgbuilds/monado-xreal/PKGBUILD
+rg -qF "grep -q '^XREAL_AIR_ZSTD_FOUND:INTERNAL=1\$' build/CMakeCache.txt" pkgbuilds/monado-xreal/PKGBUILD
 rg -q "'hypxrland-stack'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD
 rg -qF '`hypxrland-omarchy` also installs `monado-xreal`' pkgbuilds/hypxrland-stack/README.md
@@ -306,7 +323,7 @@ xreal_commit=$(pkgbuild_value xreal-ctl '"$_commit"')
 [[ $(pkgbuild_value xreal-ctl '"${source[0]}"') == "$(pkgbuild_value hypxrland '"${source[0]}"')" ]]
 [[ $(pkgbuild_value xreal-ctl '"${sha256sums[0]}"') == "$(pkgbuild_value hypxrland '"${sha256sums[0]}"')" ]]
 (( $(pkgbuild_value xreal-ctl '"${#source[@]}"') == 1 ))
-[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261102.1.g${xreal_commit:0:9}" ]]
+[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261103.2.g${xreal_commit:0:9}" ]]
 [[ $(pkgbuild_value xreal-ctl '"$url"') == "$(pkgbuild_value hypxrland '"$url"')" ]]
 mapfile -t xreal_depends < <(pkgbuild_value xreal-ctl '"${depends[@]}"')
 [[ ${xreal_depends[*]} == "glibc hidapi" ]]
@@ -383,20 +400,25 @@ printf '%s\n' "$@"
 EOF
 chmod 0755 "$legacy_tmp/bin/uwsm"
 
-HOME="$legacy_tmp/home" \
-XDG_CONFIG_HOME="$legacy_tmp/config" \
-HYPXRLAND_OMARCHY_TEMPLATE="$setup_tmp/template" \
-  bash pkgbuilds/hypxrland-omarchy/omarchy-setup-hypxrland >/dev/null
-[[ ! -e $legacy_tmp/config/hypr/hyprland-xr.lua ]]
-[[ $(<"$legacy_tmp/config/hypr/hyprland-xr.conf") == "legacy customization" ]]
-
+# HypXRland 0.57 reads Lua only: a lone legacy .conf is refused, not started.
+status=0
 PATH="$legacy_tmp/bin:$PATH" \
 HOME="$legacy_tmp/home" \
 XDG_CONFIG_HOME="$legacy_tmp/config" \
   bash pkgbuilds/hypxrland/hypxrland-session \
-  >"$legacy_tmp/command" 2>"$legacy_tmp/warning"
-grep -Fxq "$legacy_tmp/config/hypr/hyprland-xr.conf" "$legacy_tmp/command"
-grep -Fq 'legacy hyprland-xr.conf is deprecated' "$legacy_tmp/warning"
+  >"$legacy_tmp/command" 2>"$legacy_tmp/warning" || status=$?
+(( status == 1 ))
+[[ ! -s $legacy_tmp/command ]]
+grep -Fq 'hyprland-xr.conf is no longer read' "$legacy_tmp/warning"
+grep -Fq '12-porting-to-0.57.md' "$legacy_tmp/warning"
+
+# Setup writes the Lua default beside it and leaves the .conf untouched.
+HOME="$legacy_tmp/home" \
+XDG_CONFIG_HOME="$legacy_tmp/config" \
+HYPXRLAND_OMARCHY_TEMPLATE="$setup_tmp/template" \
+  bash pkgbuilds/hypxrland-omarchy/omarchy-setup-hypxrland >/dev/null
+[[ $(<"$legacy_tmp/config/hypr/hyprland-xr.lua") == "packaged template" ]]
+[[ $(<"$legacy_tmp/config/hypr/hyprland-xr.conf") == "legacy customization" ]]
 
 printf '%s\n' 'lua customization' >"$legacy_tmp/config/hypr/hyprland-xr.lua"
 PATH="$legacy_tmp/bin:$PATH" \
