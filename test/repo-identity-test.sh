@@ -28,8 +28,20 @@ rg -q '^\[hypxr\]$' build/build.sh ||
   fail "published HypXR dependency repository is missing"
 rg -q '^\[omarchy\]$' build/build.sh ||
   fail "public Omarchy dependency repository is missing"
-rg -q 'pkgs\.omarchy\.org/\$MIRROR/' build/build.sh ||
-  fail "Omarchy dependency ring does not follow the HypXR ring"
+# The Omarchy ring defaults to the HypXR ring and may target another one
+# (the edge channel builds for Omarchy stable while that is Omarchy 4).
+rg -q 'pkgs\.omarchy\.org/\$OMARCHY_RING/' build/build.sh ||
+  fail "Omarchy dependency repository does not follow OMARCHY_RING"
+rg -q '^OMARCHY_RING=\$\{OMARCHY_RING:-\$MIRROR\}$' build/build.sh ||
+  fail "Omarchy dependency ring does not default to the HypXR ring"
+rg -q '^OMARCHY_RING=\$\{OMARCHY_RING:-\$MIRROR\}$' bin/build ||
+  fail "builder's Omarchy ring does not default to the HypXR ring"
+rg -q 'build_docker_image "\$BUILD_DIR" "\$ARCH" "\$OMARCHY_RING"' bin/build ||
+  fail "builder image's Arch mirror does not follow OMARCHY_RING"
+rg -q -- '-e OMARCHY_RING="\$OMARCHY_RING"' bin/build ||
+  fail "builder does not pass OMARCHY_RING into the container"
+rg -q '^  OMARCHY_RING: stable$' .github/workflows/packages.yml ||
+  fail "edge wave does not build against Omarchy stable"
 
 rg -q 'sign-database' bin/release || fail "release does not sign databases"
 rg -q 'hypxr\.db\.tar\.zst\.sig' build/sign-database.sh ||
