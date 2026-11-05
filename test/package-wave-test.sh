@@ -108,7 +108,7 @@ declare -A expected_pkgrel=(
   [hypxrhud]=5
   [hypxrland]=1
   [hypxrland-legacy-config]=5
-  [hypxrland-omarchy]=5
+  [hypxrland-omarchy]=6
   [hypxrland-stack]=6
   [hypxrpaper]=6
   [hypxrva]=6
@@ -206,7 +206,7 @@ for package in "${packages[@]}"; do
 done
 
 rg -q "'omarchy>=4\.0\.0'" pkgbuilds/hypxrland-omarchy/PKGBUILD
-rg -q "'omarchy<4\.1'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+rg -q "'omarchy<4\.6'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'hypxrland-stack'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD
 rg -qF '`hypxrland-omarchy` also installs `monado-xreal`' pkgbuilds/hypxrland-stack/README.md

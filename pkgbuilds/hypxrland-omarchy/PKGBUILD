@@ -2,7 +2,7 @@
 
 pkgname=hypxrland-omarchy
 pkgver=1.1.0
-pkgrel=5
+pkgrel=6
 pkgdesc='Omarchy XR session installed beside the stable Omarchy session'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
@@ -16,7 +16,7 @@ depends=(
   'hypxrland-stack'
   'monado-xreal>=25.1.0.20261102.1.g76c63baca-1'
   'omarchy>=4.0.0'
-  'omarchy<4.1'
+  'omarchy<4.6'
   'xreal-ctl>=0.20261102.1.ge3a89bc8c-1'
 )
 makedepends=('desktop-file-utils')
