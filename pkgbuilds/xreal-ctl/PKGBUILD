@@ -15,7 +15,7 @@
 
 pkgname=xreal-ctl
 pkgver=0.20261102.1.ge3a89bc8c
-pkgrel=1
+pkgrel=2
 pkgdesc='Display mode and brightness control for XREAL Air glasses'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/Hyprland'
