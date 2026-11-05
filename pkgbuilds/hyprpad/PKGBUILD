@@ -2,7 +2,7 @@
 
 pkgname=hyprpad
 pkgver=0.20261013.1.gb3f9dc704
-pkgrel=2
+pkgrel=3
 pkgdesc='Drive Hyprland from a Steam Controller or gamepad without giving up Steam Input'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/hyprpad'
