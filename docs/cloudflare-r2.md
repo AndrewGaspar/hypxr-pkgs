@@ -5,6 +5,7 @@ exposed through `hypxr.omedora.org`. The repository layout is:
 
 ```text
 /edge/x86_64/
+/next/x86_64/
 /stable/x86_64/
 ```
 

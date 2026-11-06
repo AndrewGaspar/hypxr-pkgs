@@ -79,6 +79,25 @@ Inspect the build plan without Docker or network access:
 bin/repo build --dry-run
 ```
 
+## Channels
+
+| Channel | Branch | Builds against | For |
+| --- | --- | --- | --- |
+| `edge` | `master` | Omarchy stable | Omarchy's current release (4.0.x) |
+| `next` | `next` | Omarchy edge | Omarchy's next release (4.5 release candidates) |
+| `stable` | none | | edge's fast-ring packages, promoted with `bin/repo migrate` |
+
+`helpers/package-metadata.sh` (`channel_omarchy_ring`) maps each channel to its
+Omarchy ring; `OMARCHY_RING` overrides it for a local build. Changes for
+Omarchy's current release land on `master` and merge forward into `next`. When
+Omarchy promotes its edge release to stable, merge `next` into `master`.
+
+To follow `next`, point the `[hypxr]` server at it:
+
+```ini
+Server = https://hypxr.omedora.org/next/$arch
+```
+
 ## Release model
 
 GitHub Actions is the build and operational signing boundary. Every pull request
@@ -86,8 +105,8 @@ builds the complete edge package wave and proves the signing path with a
 disposable key. Trusted `master` runs upload unsigned packages and a digest
 manifest to the private `packages-staging` bucket.
 
-Production publication is a manual workflow dispatch from `master` with the
-`publish` input enabled. The `production` GitHub environment must require an
+Production publication is a manual workflow dispatch from `master` (edge) or
+`next` (next) with the `publish` input enabled. The `production` GitHub environment must require an
 approving reviewer. It exposes only the replaceable operational signing subkey,
 its passphrase, and an R2 token restricted to `packages`; the offline primary
 and recovery secret keys never enter GitHub or Cloudflare.
@@ -141,6 +160,8 @@ The reviewer-protected `production` environment will have:
   `HYPXR_R2_PRODUCTION_SECRET_ACCESS_KEY`, restricted to `packages` only.
 - Non-secret variables `HYPXR_PUBLIC_KEY`, `HYPXR_PRIMARY_FINGERPRINT`, and
   `HYPXR_SIGNING_SUBKEY_FINGERPRINT`.
+
+Both environments allow deployments from the `master` and `next` branches.
 
 Do not populate production until the disposable workflow passes and the
 offline key ceremony is complete. Repository-level secrets must never include

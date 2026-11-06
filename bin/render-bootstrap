@@ -9,7 +9,7 @@ CHANNEL="edge"
 OUTPUT=""
 
 usage() {
-  echo "Usage: $0 --public-key <file> --primary-fingerprint <40-hex> --repo-base <https-url> --output <file> [--channel edge|stable]"
+  echo "Usage: $0 --public-key <file> --primary-fingerprint <40-hex> --repo-base <https-url> --output <file> [--channel edge|next|stable]"
 }
 
 while (( $# > 0 )); do
@@ -60,8 +60,8 @@ if [[ ! $PRIMARY_FINGERPRINT =~ ^[0-9A-F]{40}$ ]]; then
   exit 1
 fi
 
-if [[ $CHANNEL != "edge" && $CHANNEL != "stable" ]]; then
-  echo "ERROR: Channel must be edge or stable" >&2
+if [[ $CHANNEL != "edge" && $CHANNEL != "next" && $CHANNEL != "stable" ]]; then
+  echo "ERROR: Channel must be edge, next or stable" >&2
   exit 1
 fi
 
