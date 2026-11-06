@@ -2,7 +2,7 @@
 
 pkgname=hypxrland-omarchy
 pkgver=1.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc='Omarchy XR session installed beside the stable Omarchy session'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
@@ -14,10 +14,10 @@ license=('MIT')
 # monado-xreal -3 is the first whose unit creates its IPC socket directory.
 depends=(
   'hypxrland-stack'
-  'monado-xreal>=25.1.0.20261102.1.g76c63baca-2'
+  'monado-xreal>=25.1.0.20261102.1.g76c63baca-3'
   'omarchy>=4.0.0'
   'omarchy<4.6'
-  'xreal-ctl>=0.20261102.1.ge3a89bc8c-2'
+  'xreal-ctl>=0.20261105.1.g964889899-1'
 )
 makedepends=('desktop-file-utils')
 source=(
