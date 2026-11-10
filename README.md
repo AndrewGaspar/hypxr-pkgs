@@ -54,6 +54,18 @@ their brightness; the XR desktop's 2D/3D switch runs it. It is built from the
 same pinned HypXRland archive as `hypxrland`, so a `hypxrland` bump must move
 its `_commit` and checksum too (`test/package-wave-test.sh` enforces this).
 
+A Hyprland plugin only loads into the exact compositor build it was compiled
+against, so plugins for the XR session are built against HypXRland, not stock
+Hyprland. `hypxrland-headers` is split from the `hypxrland` build and installs
+the headers under `/usr/lib/hypxrland/include` with a pkg-config file in
+`/usr/lib/hypxrland/pkgconfig` (build with
+`PKG_CONFIG_PATH=/usr/lib/hypxrland/pkgconfig`), clear of stock `hyprland`'s
+`/usr/include/hyprland`. A plugin built this way installs under
+`/usr/lib/hypxrland/plugins/<name>/`, beside the stock build, and depends on the
+exact `hypxrland` version. `omarchy-hyprland-titlebars-hypxr` is the first: the
+floating layout's titlebars, built for HypXRland. The edge wave rebuilds every
+package on each publish, so these plugins follow every HypXRland snapshot.
+
 `hyprpad`, the Steam Controller daemon for Hyprland, is published from the same
 repository but is not part of `hypxrland-stack`; install it separately with
 `sudo pacman -S hyprpad` and follow `/usr/share/doc/hyprpad/README.package.md`.

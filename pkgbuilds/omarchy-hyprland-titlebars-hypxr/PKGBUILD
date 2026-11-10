@@ -1,0 +1,76 @@
+# Maintainer: Andrew Gaspar
+
+# Omarchy's floating-workspace titlebars, built for HypXRland.
+#
+# A Hyprland plugin only loads into the exact compositor build it was compiled
+# against (its hash covers the commit plus the aquamarine, hyprutils and
+# hyprgraphics versions). omarchy-hyprland-titlebars is built for stock
+# Hyprland, so it fails with "Version mismatch" in the XR session. This builds
+# the same source against hypxrland-headers and installs it beside the stock
+# plugin, under /usr/lib/hypxrland/plugins/, so the stock session keeps its
+# own build. Every edge publish rebuilds the wave, so this follows each
+# HypXRland snapshot; the exact hypxrland dependency keeps the pair in step.
+#
+# The stock package stays a dependency: Omarchy checks that its file exists
+# before it loads titlebars at all.
+
+pkgname=omarchy-hyprland-titlebars-hypxr
+_name=omarchy-hyprland-titlebars
+pkgver=0.2.2
+pkgrel=1
+pkgdesc="Titlebars for Omarchy's floating workspaces, built for HypXRland"
+arch=('x86_64')
+url='https://github.com/omacom/omarchy-hyprland-titlebars'
+license=('BSD-3-Clause' 'MIT')
+depends=(
+  'glibc'
+  'libgcc'
+  'libstdc++'
+  'hyprlang'
+  'hyprutils'
+  'hypxrland=0.56.2.r468.g964889899-2'
+  'omarchy-hyprland-titlebars'
+)
+makedepends=(
+  'cmake'
+  'hypxrland-headers=0.56.2.r468.g964889899-2'
+  'pkgconf'
+)
+options=('!lto' '!debug')
+source=("$_name-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('98a2c43024b7e72dbe97620e6560b5e59d5b02eb25c5fd806586a6efacc7e23e')
+
+build() {
+  # Only HypXRland's pkg-config file: stock hyprland's /usr/share/pkgconfig
+  # entry must not win.
+  PKG_CONFIG_PATH=/usr/lib/hypxrland/pkgconfig \
+    cmake -S "$_name-$pkgver" -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  grep -Fq '/usr/lib/hypxrland/include' build/CMakeCache.txt
+  cmake --build build
+}
+
+check() {
+  local commit
+  commit=$(sed -n 's/^#define GIT_COMMIT_HASH *"\(.*\)"$/\1/p' \
+    /usr/lib/hypxrland/include/hyprland/src/version.h)
+  [[ -n $commit ]]
+  # The plugin carries the hash of the headers it was built against.
+  grep -aFq "$commit" build/titlebars.so
+  if [[ -r /usr/include/hyprland/src/version.h ]]; then
+    local stock
+    stock=$(sed -n 's/^#define GIT_COMMIT_HASH *"\(.*\)"$/\1/p' /usr/include/hyprland/src/version.h)
+    if [[ $stock != "$commit" ]] && grep -aFq "$stock" build/titlebars.so; then
+      echo "titlebars.so was built against stock Hyprland's headers" >&2
+      exit 1
+    fi
+  fi
+}
+
+package() {
+  install -Dm755 build/titlebars.so \
+    "$pkgdir/usr/lib/hypxrland/plugins/$_name/titlebars.so"
+  install -Dm644 "$_name-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$_name-$pkgver/LICENSE.MIT" "$pkgdir/usr/share/licenses/$pkgname/LICENSE.MIT"
+}
