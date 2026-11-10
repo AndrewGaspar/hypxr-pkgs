@@ -65,6 +65,15 @@ the headers under `/usr/lib/hypxrland/include` with a pkg-config file in
 exact `hypxrland` version. `omarchy-hyprland-titlebars-hypxr` is the first: the
 floating layout's titlebars, built for HypXRland. The edge wave rebuilds every
 package on each publish, so these plugins follow every HypXRland snapshot.
+`hyprshare` is the second: it switches what a screenshare shows without
+restarting the share. Load it from `hyprland-xr.lua` with
+`hl.plugin.load("/usr/lib/hypxrland/plugins/hyprshare/hyprshare.so")`.
+
+`xdg-desktop-portal-hyprland-hypxr` is xdg-desktop-portal-hyprland 1.4.1 with
+the HypXR screensharing fixes. It works in both the stock and the XR session.
+It provides and conflicts with `xdg-desktop-portal-hyprland` but does not
+replace it on upgrade, so install it explicitly with
+`sudo pacman -S xdg-desktop-portal-hyprland-hypxr`.
 
 `hyprpad`, the Steam Controller daemon for Hyprland, is published from the same
 repository but is not part of `hypxrland-stack`; install it separately with

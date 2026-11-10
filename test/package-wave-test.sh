@@ -7,6 +7,7 @@ cd "$ROOT"
 
 packages=(
   hyprpad
+  hyprshare
   hypxrhud
   hypxrcompose
   hypxr-keyring
@@ -22,6 +23,7 @@ packages=(
   omarchy-hyprland-titlebars-hypxr
   voxtype-hypxr
   wivrn-hypxr
+  xdg-desktop-portal-hyprland-hypxr
   xreal-ctl
 )
 
@@ -53,6 +55,7 @@ done
 
 for package in \
   hyprpad \
+  hyprshare \
   hypxrhud \
   hypxrcompose \
   hypxrland \
@@ -63,6 +66,7 @@ for package in \
   omarchy-hyprland-titlebars-hypxr \
   voxtype-hypxr \
   wivrn-hypxr \
+  xdg-desktop-portal-hyprland-hypxr \
   xreal-ctl; do
   [[ $(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "${arch[*]}"') == "x86_64" ]]
 done
@@ -105,6 +109,7 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 # the whole wave for that reason.
 declare -A expected_pkgrel=(
   [hyprpad]=5
+  [hyprshare]=1
   [hypxr-keyring]=9
   [hypxrcompose]=8
   [hypxrhud]=8
@@ -120,6 +125,7 @@ declare -A expected_pkgrel=(
   [omarchy-hyprland-titlebars-hypxr]=1
   [voxtype-hypxr]=7
   [wivrn-hypxr]=8
+  [xdg-desktop-portal-hyprland-hypxr]=1
   [xreal-ctl]=2
 )
 for package in "${packages[@]}"; do
@@ -326,6 +332,29 @@ rg -qF 'PKG_CONFIG_PATH=/usr/lib/hypxrland/pkgconfig' "$titlebars"
 rg -qF '"$pkgdir/usr/lib/hypxrland/plugins/$_name/titlebars.so"' "$titlebars"
 rg -qF 'grep -aFq "$commit" build/titlebars.so' "$titlebars"
 rg -qx "  'omarchy-hyprland-titlebars-hypxr'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+
+hyprshare=pkgbuilds/hyprshare/PKGBUILD
+mapfile -t hyprshare_depends < <(cd "${hyprshare%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"')
+mapfile -t hyprshare_makedepends < <(cd "${hyprshare%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${makedepends[@]}"')
+printf '%s\n' "${hyprshare_depends[@]}" | grep -Fxq "hypxrland=$hypxrland_version"
+printf '%s\n' "${hyprshare_makedepends[@]}" | grep -Fxq "hypxrland-headers=$hypxrland_version"
+rg -qF '_pc_dir=/usr/lib/hypxrland/pkgconfig' "$hyprshare"
+rg -qF 'make HYPRLAND_PC_DIR=$_pc_dir GLAZE_INCLUDE=' "$hyprshare"
+rg -qF '"$pkgdir/usr/lib/hypxrland/plugins/$pkgname/$pkgname.so"' "$hyprshare"
+rg -qF 'grep -aFq "$commit" build/hyprshare-v4.so' "$hyprshare"
+
+xdph=pkgbuilds/xdg-desktop-portal-hyprland-hypxr/PKGBUILD
+mapfile -t xdph_provides < <(cd "${xdph%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${provides[@]}"')
+mapfile -t xdph_conflicts < <(cd "${xdph%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${conflicts[@]}"')
+printf '%s\n' "${xdph_provides[@]}" | grep -Fxq 'xdg-desktop-portal-hyprland=1.4.1'
+printf '%s\n' "${xdph_provides[@]}" | grep -Fxq 'xdg-desktop-portal-impl'
+printf '%s\n' "${xdph_conflicts[@]}" | grep -Fxq 'xdg-desktop-portal-hyprland'
+# Opt-in: it must never swap the stock portal in on a plain -Syu.
+if rg -q '^replaces=' "$xdph"; then
+  echo "FAIL: $xdph must not replace the stock portal" >&2
+  exit 1
+fi
+rg -qF -- '-DCMAKE_INSTALL_LIBEXECDIR=/usr/lib' "$xdph"
 
 # xreal-ctl builds contrib/xreal from the archive hypxrland already pins, so a
 # hypxrland bump must carry it along: same commit, same file name, same sha.
