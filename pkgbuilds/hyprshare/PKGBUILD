@@ -13,14 +13,13 @@
 # snapshot; the exact hypxrland dependency keeps the pair in step.
 
 pkgname=hyprshare
-_commit=f31906e9f6ecff9e3f360246b448b1b94452d7b9
-pkgver=0.r6.gf31906e9f
+_commit=f82d095e45dda325b7972039a9d6f273a45bc8c6
+pkgver=0.r7.gf82d095e4
 pkgrel=1
 pkgdesc='Switch what a screenshare shows without restarting it, for HypXRland'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/hyprshare'
-# Upstream has no LICENSE file yet.
-license=('LicenseRef-unspecified')
+license=('BSD-3-Clause')
 depends=(
   'glibc'
   'libgcc'
@@ -35,7 +34,7 @@ makedepends=(
 )
 options=('!lto' '!debug')
 source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
-sha256sums=('f009d21e41e568de39234da4a19aa20e0f2f67364c539d890395f05e2d74bd42')
+sha256sums=('a3e98ddbe16c8139c1bafb903c02dfaa4fe0be29320ee02156fa6f87b469df5f')
 
 _pc_dir=/usr/lib/hypxrland/pkgconfig
 
@@ -79,4 +78,5 @@ package() {
   install -Dm755 build/hyprshare-v4.so \
     "$pkgdir/usr/lib/hypxrland/plugins/$pkgname/$pkgname.so"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
