@@ -54,6 +54,27 @@ their brightness; the XR desktop's 2D/3D switch runs it. It is built from the
 same pinned HypXRland archive as `hypxrland`, so a `hypxrland` bump must move
 its `_commit` and checksum too (`test/package-wave-test.sh` enforces this).
 
+A Hyprland plugin only loads into the exact compositor build it was compiled
+against, so plugins for the XR session are built against HypXRland, not stock
+Hyprland. `hypxrland-headers` is split from the `hypxrland` build and installs
+the headers under `/usr/lib/hypxrland/include` with a pkg-config file in
+`/usr/lib/hypxrland/pkgconfig` (build with
+`PKG_CONFIG_PATH=/usr/lib/hypxrland/pkgconfig`), clear of stock `hyprland`'s
+`/usr/include/hyprland`. A plugin built this way installs under
+`/usr/lib/hypxrland/plugins/<name>/`, beside the stock build, and depends on the
+exact `hypxrland` version. `omarchy-hyprland-titlebars-hypxr` is the first: the
+floating layout's titlebars, built for HypXRland. The edge wave rebuilds every
+package on each publish, so these plugins follow every HypXRland snapshot.
+`hyprshare` is the second: it switches what a screenshare shows without
+restarting the share. Load it from `hyprland-xr.lua` with
+`hl.plugin.load("/usr/lib/hypxrland/plugins/hyprshare/hyprshare.so")`.
+
+`xdg-desktop-portal-hyprland-hypxr` is xdg-desktop-portal-hyprland 1.4.1 with
+the HypXR screensharing fixes. It works in both the stock and the XR session.
+It provides and conflicts with `xdg-desktop-portal-hyprland` but does not
+replace it on upgrade, so install it explicitly with
+`sudo pacman -S xdg-desktop-portal-hyprland-hypxr`.
+
 `hyprpad`, the Steam Controller daemon for Hyprland, is published from the same
 repository but is not part of `hypxrland-stack`; install it separately with
 `sudo pacman -S hyprpad` and follow `/usr/share/doc/hyprpad/README.package.md`.

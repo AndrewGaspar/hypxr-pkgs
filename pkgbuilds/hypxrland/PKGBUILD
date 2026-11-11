@@ -1,8 +1,11 @@
 # Maintainer: Andrew Gaspar
 
-pkgname=hypxrland
+pkgbase=hypxrland
+# hypxrland-headers comes out of the same build: a plugin only loads into the
+# exact compositor build whose headers it was compiled against.
+pkgname=(hypxrland hypxrland-headers)
 pkgver=0.56.2.r468.g964889899
-pkgrel=1
+pkgrel=2
 pkgdesc='Hyprland-based spatial OpenXR compositor installed beside stable Hyprland'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/Hyprland'
@@ -157,7 +160,7 @@ check() {
   rm -rf "$runtime_dir"
 }
 
-package() {
+package_hypxrland() {
   install -Dm755 build/Hyprland "$pkgdir/usr/lib/hypxrland/Hyprland"
   install -Dm755 build/hyprctl/hyprctl "$pkgdir/usr/lib/hypxrland/hyprctl"
   install -Dm755 hypxrland-session "$pkgdir/usr/bin/hypxrland-session"
@@ -180,4 +183,31 @@ package() {
     "$pkgdir/usr/share/doc/$pkgname/hyprland-xr.lua"
   install -Dm644 README.package.md \
     "$pkgdir/usr/share/doc/$pkgname/README.package.md"
+}
+
+# Headers for building plugins against HypXRland. They live under
+# /usr/lib/hypxrland, beside the private compositor, because stock hyprland
+# owns /usr/include/hyprland and /usr/share/pkgconfig/hyprland.pc. Build a
+# plugin with PKG_CONFIG_PATH=/usr/lib/hypxrland/pkgconfig. version.h and the
+# protocol headers are generated into the source tree by the build.
+package_hypxrland-headers() {
+  pkgdesc='HypXRland headers, for building Hyprland plugins against the HypXRland compositor'
+  depends=("hypxrland=$pkgver-$pkgrel")
+  optdepends=()
+
+  local include="$pkgdir/usr/lib/hypxrland/include/hyprland"
+  local header
+  while IFS= read -r -d '' header; do
+    install -Dm644 "Hyprland-$_commit/$header" "$include/$header"
+  done < <(cd "Hyprland-$_commit" && find src protocols -type f \
+    \( -name '*.h' -o -name '*.hpp' -o -name '*.inc' \) -print0)
+  grep -Fq "\"$_commit\"" "$include/src/version.h"
+
+  install -d "$pkgdir/usr/lib/hypxrland/pkgconfig"
+  sed 's|^prefix=/usr/include$|prefix=/usr/lib/hypxrland/include|' build/hyprland.pc \
+    >"$pkgdir/usr/lib/hypxrland/pkgconfig/hyprland.pc"
+  grep -Fxq 'prefix=/usr/lib/hypxrland/include' "$pkgdir/usr/lib/hypxrland/pkgconfig/hyprland.pc"
+
+  install -Dm644 "Hyprland-$_commit/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

@@ -7,6 +7,7 @@ cd "$ROOT"
 
 packages=(
   hyprpad
+  hyprshare
   hypxrhud
   hypxrcompose
   hypxr-keyring
@@ -19,8 +20,10 @@ packages=(
   hypxrvoice-model-base-en
   hypxrvoice
   monado-xreal
+  omarchy-hyprland-titlebars-hypxr
   voxtype-hypxr
   wivrn-hypxr
+  xdg-desktop-portal-hyprland-hypxr
   xreal-ctl
 )
 
@@ -52,6 +55,7 @@ done
 
 for package in \
   hyprpad \
+  hyprshare \
   hypxrhud \
   hypxrcompose \
   hypxrland \
@@ -59,8 +63,10 @@ for package in \
   hypxrva \
   hypxrvoice \
   monado-xreal \
+  omarchy-hyprland-titlebars-hypxr \
   voxtype-hypxr \
   wivrn-hypxr \
+  xdg-desktop-portal-hyprland-hypxr \
   xreal-ctl; do
   [[ $(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "${arch[*]}"') == "x86_64" ]]
 done
@@ -102,22 +108,25 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 # The aquamarine 0.15.0 (libaquamarine.so=14) rebuild of hypxrland re-versioned
 # the whole wave for that reason.
 declare -A expected_pkgrel=(
-  [hyprpad]=4
-  [hypxr-keyring]=8
-  [hypxrcompose]=7
-  [hypxrhud]=7
-  [hypxrland]=1
-  [hypxrland-legacy-config]=7
-  [hypxrland-omarchy]=8
-  [hypxrland-stack]=8
-  [hypxrpaper]=8
-  [hypxrva]=8
-  [hypxrvoice]=7
-  [hypxrvoice-model-base-en]=8
-  [monado-xreal]=3
-  [voxtype-hypxr]=6
-  [wivrn-hypxr]=7
-  [xreal-ctl]=1
+  [hyprpad]=5
+  [hyprshare]=1
+  [hypxr-keyring]=9
+  [hypxrcompose]=8
+  [hypxrhud]=8
+  [hypxrland]=2
+  [hypxrland-legacy-config]=8
+  [hypxrland-omarchy]=9
+  [hypxrland-stack]=9
+  [hypxrpaper]=9
+  [hypxrva]=9
+  [hypxrvoice]=8
+  [hypxrvoice-model-base-en]=9
+  [monado-xreal]=4
+  [omarchy-hyprland-titlebars-hypxr]=1
+  [voxtype-hypxr]=7
+  [wivrn-hypxr]=8
+  [xdg-desktop-portal-hyprland-hypxr]=1
+  [xreal-ctl]=2
 )
 for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
@@ -125,14 +134,14 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r468.g964889899-1'
-  'hypxrcompose>=0.20260820.1.gf75ccd4ec-7'
-  'hypxrhud>=0.20260816.1.gf96d0e794-7'
-  'hypxrpaper>=0.20260704.1.g5cae848cd-8'
-  'hypxrva>=0.20260803.1.gbba2c5f8b-8'
-  'hypxrvoice>=0.20260812.1.g7ce7d33b2-7'
-  'hypxrvoice-model-base-en>=1.0.0-8'
-  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-7'
+  'hypxrland>=0.56.2.r468.g964889899-2'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-8'
+  'hypxrhud>=0.20260816.1.gf96d0e794-8'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-9'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-9'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-8'
+  'hypxrvoice-model-base-en>=1.0.0-9'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-8'
 )
 mapfile -t actual_stack_deps < <(
   cd pkgbuilds/hypxrland-stack
@@ -183,7 +192,7 @@ for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
 done
 
 legacy_package=pkgbuilds/hypxrland-legacy-config
-[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-7" ]]
+[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-8" ]]
 mapfile -t legacy_dependencies < <(
   cd "$legacy_package"
   bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
@@ -295,6 +304,57 @@ for product in 0424 0426 0428 0432; do
 done
 (( $(rg -c '^ATTRS' "$xreal_rules") == 4 ))
 rg -qF '/usr/lib/udev/rules.d/71-hypxr-xreal.rules' pkgbuilds/monado-xreal/PKGBUILD
+
+# hypxrland-headers is split from the hypxrland build, so a plugin compiled
+# against it carries the running compositor's hash. It stays under
+# /usr/lib/hypxrland: stock hyprland owns /usr/include/hyprland and
+# /usr/share/pkgconfig/hyprland.pc. Plugins built for HypXRland install under
+# /usr/lib/hypxrland/plugins/<stock dir>/, beside the stock build.
+mapfile -t hypxrland_split < <(cd pkgbuilds/hypxrland && bash -c 'source PKGBUILD; printf "%s\n" "${pkgname[@]}"')
+[[ ${hypxrland_split[*]} == "hypxrland hypxrland-headers" ]]
+[[ $(cd pkgbuilds/hypxrland && bash -c 'source PKGBUILD; printf "%s" "$pkgbase"') == "hypxrland" ]]
+rg -qF '"$pkgdir/usr/lib/hypxrland/pkgconfig/hyprland.pc"' pkgbuilds/hypxrland/PKGBUILD
+rg -qF 'prefix=/usr/lib/hypxrland/include' pkgbuilds/hypxrland/PKGBUILD
+rg -qF 'local include="$pkgdir/usr/lib/hypxrland/include/hyprland"' pkgbuilds/hypxrland/PKGBUILD
+if rg -n '"\$pkgdir/usr/(include|share/pkgconfig)' pkgbuilds/hypxrland/PKGBUILD; then
+  echo "FAIL: hypxrland-headers must not collide with stock hyprland's headers" >&2
+  exit 1
+fi
+
+hypxrland_version=$(cd pkgbuilds/hypxrland && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"')
+titlebars=pkgbuilds/omarchy-hyprland-titlebars-hypxr/PKGBUILD
+mapfile -t titlebars_depends < <(cd "${titlebars%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"')
+mapfile -t titlebars_makedepends < <(cd "${titlebars%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${makedepends[@]}"')
+printf '%s\n' "${titlebars_depends[@]}" | grep -Fxq "hypxrland=$hypxrland_version"
+printf '%s\n' "${titlebars_depends[@]}" | grep -Fxq 'omarchy-hyprland-titlebars'
+printf '%s\n' "${titlebars_makedepends[@]}" | grep -Fxq "hypxrland-headers=$hypxrland_version"
+rg -qF 'PKG_CONFIG_PATH=/usr/lib/hypxrland/pkgconfig' "$titlebars"
+rg -qF '"$pkgdir/usr/lib/hypxrland/plugins/$_name/titlebars.so"' "$titlebars"
+rg -qF 'grep -aFq "$commit" build/titlebars.so' "$titlebars"
+rg -qx "  'omarchy-hyprland-titlebars-hypxr'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+
+hyprshare=pkgbuilds/hyprshare/PKGBUILD
+mapfile -t hyprshare_depends < <(cd "${hyprshare%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"')
+mapfile -t hyprshare_makedepends < <(cd "${hyprshare%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${makedepends[@]}"')
+printf '%s\n' "${hyprshare_depends[@]}" | grep -Fxq "hypxrland=$hypxrland_version"
+printf '%s\n' "${hyprshare_makedepends[@]}" | grep -Fxq "hypxrland-headers=$hypxrland_version"
+rg -qF '_pc_dir=/usr/lib/hypxrland/pkgconfig' "$hyprshare"
+rg -qF 'make HYPRLAND_PC_DIR=$_pc_dir GLAZE_INCLUDE=' "$hyprshare"
+rg -qF '"$pkgdir/usr/lib/hypxrland/plugins/$pkgname/$pkgname.so"' "$hyprshare"
+rg -qF 'grep -aFq "$commit" build/hyprshare-v4.so' "$hyprshare"
+
+xdph=pkgbuilds/xdg-desktop-portal-hyprland-hypxr/PKGBUILD
+mapfile -t xdph_provides < <(cd "${xdph%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${provides[@]}"')
+mapfile -t xdph_conflicts < <(cd "${xdph%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${conflicts[@]}"')
+printf '%s\n' "${xdph_provides[@]}" | grep -Fxq 'xdg-desktop-portal-hyprland=1.4.1'
+printf '%s\n' "${xdph_provides[@]}" | grep -Fxq 'xdg-desktop-portal-impl'
+printf '%s\n' "${xdph_conflicts[@]}" | grep -Fxq 'xdg-desktop-portal-hyprland'
+# Opt-in: it must never swap the stock portal in on a plain -Syu.
+if rg -q '^replaces=' "$xdph"; then
+  echo "FAIL: $xdph must not replace the stock portal" >&2
+  exit 1
+fi
+rg -qF -- '-DCMAKE_INSTALL_LIBEXECDIR=/usr/lib' "$xdph"
 
 # xreal-ctl builds contrib/xreal from the archive hypxrland already pins, so a
 # hypxrland bump must carry it along: same commit, same file name, same sha.

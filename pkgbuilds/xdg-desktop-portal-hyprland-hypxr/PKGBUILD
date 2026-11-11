@@ -1,0 +1,85 @@
+# Maintainer: Andrew Gaspar
+
+# xdg-desktop-portal-hyprland 1.4.1 with the HypXR screensharing fixes
+# (AndrewGaspar/xdg-desktop-portal-hyprland, branch share-switch): upstream
+# #424, #425 and #447, a requeue after a failed frame (#445/#451), no repeat
+# renegotiation, renegotiate instead of the DMA format RASSERT abort, and a
+# dma-buf retry reset. See TESTING-share-switch.md in the source.
+#
+# The recipe mirrors Arch's xdg-desktop-portal-hyprland 1.4.1-2, so the unit,
+# D-Bus service, hyprland.portal and hyprland-share-picker land where the stock
+# package puts them. It works with both stock Hyprland and HypXRland, and a
+# custom_picker_binary in xdph.conf (hyprland-preview-share-picker) keeps
+# working. It replaces the stock package only when installed explicitly.
+
+pkgname=xdg-desktop-portal-hyprland-hypxr
+_name=xdg-desktop-portal-hyprland
+_basever=1.4.1
+_commit=540fb9237d29c4c2aee5b0b42688ef31e097d2ce
+_protocolver=4d29e48433270a2af06b8bc711ca1fe5109746cd
+pkgver=1.4.1.r9.g540fb9237
+pkgrel=1
+pkgdesc='xdg-desktop-portal backend for hyprland, with the HypXR screensharing fixes'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/xdg-desktop-portal-hyprland'
+license=('MIT')
+provides=("$_name=$_basever" 'xdg-desktop-portal-impl')
+conflicts=("$_name")
+depends=(
+  'libgcc'
+  'libstdc++'
+  'glibc'
+  'hyprlang' 'libhyprlang.so'
+  'hyprutils' 'libhyprutils.so'
+  'libinih'
+  'pipewire'
+  'qt6-base'
+  'sdbus-cpp' 'libsdbus-c++.so'
+  'util-linux-libs' 'libuuid.so'
+  'xdg-desktop-portal'
+)
+makedepends=(
+  'cmake'
+  'hyprland-protocols'
+  'hyprwayland-scanner'
+  'wayland'
+  'wayland-protocols'
+)
+optdepends=(
+  'grim: required for the screenshot portal to function'
+  'slurp: support for interactive mode for the screenshot portal'
+)
+source=(
+  "$_name-$_commit.tar.gz::$url/archive/$_commit.tar.gz"
+  "hyprland-protocols-$_protocolver.tar.gz::https://github.com/hyprwm/hyprland-protocols/archive/$_protocolver.tar.gz"
+)
+sha256sums=(
+  '6a68f9c6f89270504df4f31a2a41996c46fb2a618023e6e0428e75ed7df188fb'
+  '5f6be4d870e94314f05ec7ff9c9c1f028748230ff80a7f89aeaf66c08e5c70e0'
+)
+
+prepare() {
+  [[ $(<"$_name-$_commit/VERSION") == "$_basever" ]]
+  cd "$_name-$_commit/subprojects"
+  rm -rf hyprland-protocols sdbus-cpp
+  ln -sfT "$srcdir/hyprland-protocols-$_protocolver" hyprland-protocols
+}
+
+build() {
+  cmake -S "$_name-$_commit" -B build \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBEXECDIR=/usr/lib \
+    -DCMAKE_BUILD_TYPE=Release
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  # The stock package's layout; the D-Bus service and unit point at this path.
+  [[ -x $pkgdir/usr/lib/$_name ]]
+  [[ -x $pkgdir/usr/bin/hyprland-share-picker ]]
+  [[ -f $pkgdir/usr/lib/systemd/user/$_name.service ]]
+  [[ -f $pkgdir/usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.hyprland.service ]]
+  [[ -f $pkgdir/usr/share/xdg-desktop-portal/portals/hyprland.portal ]]
+  install -Dm644 "$_name-$_commit/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

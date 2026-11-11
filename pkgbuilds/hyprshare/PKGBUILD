@@ -1,0 +1,82 @@
+# Maintainer: Andrew Gaspar
+
+# hyprshare: switch what a screenshare shows without restarting it, for the
+# HypXRland session (AndrewGaspar/hyprshare).
+#
+# It hooks a private compositor function and reads private members, so it only
+# works with the exact HypXRland build its headers came from. It is built
+# against hypxrland-headers with the compositor's own defines (the Makefile's
+# HYPRLAND_DEFINES, taken from the hypxrland package build) and installs under
+# /usr/lib/hypxrland/plugins/. Load it from hyprland-xr.lua:
+#   hl.plugin.load("/usr/lib/hypxrland/plugins/hyprshare/hyprshare.so")
+# Every edge publish rebuilds the wave, so this follows each HypXRland
+# snapshot; the exact hypxrland dependency keeps the pair in step.
+
+pkgname=hyprshare
+_commit=f82d095e45dda325b7972039a9d6f273a45bc8c6
+pkgver=0.r7.gf82d095e4
+pkgrel=1
+pkgdesc='Switch what a screenshare shows without restarting it, for HypXRland'
+arch=('x86_64')
+url='https://github.com/AndrewGaspar/hyprshare'
+license=('BSD-3-Clause')
+depends=(
+  'glibc'
+  'libgcc'
+  'libstdc++'
+  'lua'
+  'wayland'
+  'hypxrland=0.56.2.r468.g964889899-2'
+)
+makedepends=(
+  'hypxrland-headers=0.56.2.r468.g964889899-2'
+  'pkgconf'
+)
+options=('!lto' '!debug')
+source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('a3e98ddbe16c8139c1bafb903c02dfaa4fe0be29320ee02156fa6f87b469df5f')
+
+_pc_dir=/usr/lib/hypxrland/pkgconfig
+
+prepare() {
+  cd "$pkgname-$_commit"
+  # The Makefile hardcodes the compositor's HYPRLAND_VERSION define; it must
+  # match the headers, or a new HypXRland release needs a new hyprshare.
+  local version
+  version=$(PKG_CONFIG_PATH=$_pc_dir pkg-config --modversion hyprland)
+  grep -Fq "'-DHYPRLAND_VERSION=\"$version\"'" Makefile
+}
+
+build() {
+  cd "$pkgname-$_commit"
+  # HYPRLAND_PC_DIR takes the include paths from HypXRland's pkg-config file,
+  # not a source tree. glaze is not reached through any installed header.
+  make HYPRLAND_PC_DIR=$_pc_dir GLAZE_INCLUDE=
+  [[ -f build/hyprshare-v4.so ]]
+}
+
+check() {
+  cd "$pkgname-$_commit"
+  local commit
+  commit=$(sed -n 's/^#define GIT_COMMIT_HASH *"\(.*\)"$/\1/p' \
+    /usr/lib/hypxrland/include/hyprland/src/version.h)
+  [[ -n $commit ]]
+  # The plugin carries the hash of the headers it was built against.
+  grep -aFq "$commit" build/hyprshare-v4.so
+  if [[ -r /usr/include/hyprland/src/version.h ]]; then
+    local stock
+    stock=$(sed -n 's/^#define GIT_COMMIT_HASH *"\(.*\)"$/\1/p' /usr/include/hyprland/src/version.h)
+    if [[ $stock != "$commit" ]] && grep -aFq "$stock" build/hyprshare-v4.so; then
+      echo "hyprshare-v4.so was built against stock Hyprland's headers" >&2
+      exit 1
+    fi
+  fi
+}
+
+package() {
+  cd "$pkgname-$_commit"
+  install -Dm755 build/hyprshare-v4.so \
+    "$pkgdir/usr/lib/hypxrland/plugins/$pkgname/$pkgname.so"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
