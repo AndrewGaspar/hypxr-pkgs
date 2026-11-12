@@ -108,25 +108,25 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 # The aquamarine 0.15.0 (libaquamarine.so=14) rebuild of hypxrland re-versioned
 # the whole wave for that reason.
 declare -A expected_pkgrel=(
-  [hyprpad]=5
-  [hyprshare]=1
-  [hypxr-keyring]=9
-  [hypxrcompose]=8
-  [hypxrhud]=8
-  [hypxrland]=2
-  [hypxrland-legacy-config]=8
-  [hypxrland-omarchy]=9
-  [hypxrland-stack]=9
-  [hypxrpaper]=9
-  [hypxrva]=9
-  [hypxrvoice]=8
-  [hypxrvoice-model-base-en]=9
-  [monado-xreal]=4
-  [omarchy-hyprland-titlebars-hypxr]=1
-  [voxtype-hypxr]=7
-  [wivrn-hypxr]=8
-  [xdg-desktop-portal-hyprland-hypxr]=1
-  [xreal-ctl]=2
+  [hyprpad]=6
+  [hyprshare]=2
+  [hypxr-keyring]=10
+  [hypxrcompose]=9
+  [hypxrhud]=9
+  [hypxrland]=1
+  [hypxrland-legacy-config]=9
+  [hypxrland-omarchy]=10
+  [hypxrland-stack]=10
+  [hypxrpaper]=10
+  [hypxrva]=10
+  [hypxrvoice]=9
+  [hypxrvoice-model-base-en]=10
+  [monado-xreal]=5
+  [omarchy-hyprland-titlebars-hypxr]=2
+  [voxtype-hypxr]=8
+  [wivrn-hypxr]=9
+  [xdg-desktop-portal-hyprland-hypxr]=2
+  [xreal-ctl]=1
 )
 for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
@@ -134,14 +134,14 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r468.g964889899-2'
-  'hypxrcompose>=0.20260820.1.gf75ccd4ec-8'
-  'hypxrhud>=0.20260816.1.gf96d0e794-8'
-  'hypxrpaper>=0.20260704.1.g5cae848cd-9'
-  'hypxrva>=0.20260803.1.gbba2c5f8b-9'
-  'hypxrvoice>=0.20260812.1.g7ce7d33b2-8'
-  'hypxrvoice-model-base-en>=1.0.0-9'
-  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-8'
+  'hypxrland>=0.56.2.r469.g7ac272db9-1'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-9'
+  'hypxrhud>=0.20260816.1.gf96d0e794-9'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-10'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-10'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-9'
+  'hypxrvoice-model-base-en>=1.0.0-10'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-9'
 )
 mapfile -t actual_stack_deps < <(
   cd pkgbuilds/hypxrland-stack
@@ -192,7 +192,7 @@ for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
 done
 
 legacy_package=pkgbuilds/hypxrland-legacy-config
-[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-8" ]]
+[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-9" ]]
 mapfile -t legacy_dependencies < <(
   cd "$legacy_package"
   bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
@@ -366,7 +366,7 @@ xreal_commit=$(pkgbuild_value xreal-ctl '"$_commit"')
 [[ $(pkgbuild_value xreal-ctl '"${source[0]}"') == "$(pkgbuild_value hypxrland '"${source[0]}"')" ]]
 [[ $(pkgbuild_value xreal-ctl '"${sha256sums[0]}"') == "$(pkgbuild_value hypxrland '"${sha256sums[0]}"')" ]]
 (( $(pkgbuild_value xreal-ctl '"${#source[@]}"') == 1 ))
-[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261105.1.g${xreal_commit:0:9}" ]]
+[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261111.1.g${xreal_commit:0:9}" ]]
 [[ $(pkgbuild_value xreal-ctl '"$url"') == "$(pkgbuild_value hypxrland '"$url"')" ]]
 mapfile -t xreal_depends < <(pkgbuild_value xreal-ctl '"${depends[@]}"')
 [[ ${xreal_depends[*]} == "glibc hidapi" ]]
