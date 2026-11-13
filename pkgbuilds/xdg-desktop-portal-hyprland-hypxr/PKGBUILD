@@ -15,10 +15,10 @@
 pkgname=xdg-desktop-portal-hyprland-hypxr
 _name=xdg-desktop-portal-hyprland
 _basever=1.4.1
-_commit=540fb9237d29c4c2aee5b0b42688ef31e097d2ce
+_commit=b9e0fd11ca56a96c917f02bd76e1ab904ce07471
 _protocolver=4d29e48433270a2af06b8bc711ca1fe5109746cd
-pkgver=1.4.1.r9.g540fb9237
-pkgrel=2
+pkgver=1.4.1.r12.gb9e0fd11c
+pkgrel=1
 pkgdesc='xdg-desktop-portal backend for hyprland, with the HypXR screensharing fixes'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/xdg-desktop-portal-hyprland'
@@ -54,7 +54,7 @@ source=(
   "hyprland-protocols-$_protocolver.tar.gz::https://github.com/hyprwm/hyprland-protocols/archive/$_protocolver.tar.gz"
 )
 sha256sums=(
-  '6a68f9c6f89270504df4f31a2a41996c46fb2a618023e6e0428e75ed7df188fb'
+  '16c88119271abdc011194caa9620ebc35ea638ae3e348e0da17fb8b18a4e1f28'
   '5f6be4d870e94314f05ec7ff9c9c1f028748230ff80a7f89aeaf66c08e5c70e0'
 )
 

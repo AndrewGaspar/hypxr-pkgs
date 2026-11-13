@@ -108,25 +108,25 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 # The aquamarine 0.15.0 (libaquamarine.so=14) rebuild of hypxrland re-versioned
 # the whole wave for that reason.
 declare -A expected_pkgrel=(
-  [hyprpad]=6
-  [hyprshare]=2
-  [hypxr-keyring]=10
-  [hypxrcompose]=9
-  [hypxrhud]=9
-  [hypxrland]=1
-  [hypxrland-legacy-config]=9
-  [hypxrland-omarchy]=10
-  [hypxrland-stack]=10
-  [hypxrpaper]=10
-  [hypxrva]=10
-  [hypxrvoice]=9
-  [hypxrvoice-model-base-en]=10
-  [monado-xreal]=5
-  [omarchy-hyprland-titlebars-hypxr]=2
-  [voxtype-hypxr]=8
-  [wivrn-hypxr]=9
-  [xdg-desktop-portal-hyprland-hypxr]=2
-  [xreal-ctl]=1
+  [hyprpad]=7
+  [hyprshare]=1
+  [hypxr-keyring]=11
+  [hypxrcompose]=10
+  [hypxrhud]=10
+  [hypxrland]=2
+  [hypxrland-legacy-config]=10
+  [hypxrland-omarchy]=11
+  [hypxrland-stack]=11
+  [hypxrpaper]=11
+  [hypxrva]=11
+  [hypxrvoice]=10
+  [hypxrvoice-model-base-en]=11
+  [monado-xreal]=6
+  [omarchy-hyprland-titlebars-hypxr]=3
+  [voxtype-hypxr]=9
+  [wivrn-hypxr]=10
+  [xdg-desktop-portal-hyprland-hypxr]=1
+  [xreal-ctl]=2
 )
 for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
@@ -134,14 +134,14 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r469.g7ac272db9-1'
-  'hypxrcompose>=0.20260820.1.gf75ccd4ec-9'
-  'hypxrhud>=0.20260816.1.gf96d0e794-9'
-  'hypxrpaper>=0.20260704.1.g5cae848cd-10'
-  'hypxrva>=0.20260803.1.gbba2c5f8b-10'
-  'hypxrvoice>=0.20260812.1.g7ce7d33b2-9'
-  'hypxrvoice-model-base-en>=1.0.0-10'
-  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-9'
+  'hypxrland>=0.56.2.r469.g7ac272db9-2'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-10'
+  'hypxrhud>=0.20260816.1.gf96d0e794-10'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-11'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-11'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-10'
+  'hypxrvoice-model-base-en>=1.0.0-11'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-10'
 )
 mapfile -t actual_stack_deps < <(
   cd pkgbuilds/hypxrland-stack
@@ -192,7 +192,7 @@ for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
 done
 
 legacy_package=pkgbuilds/hypxrland-legacy-config
-[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-9" ]]
+[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-10" ]]
 mapfile -t legacy_dependencies < <(
   cd "$legacy_package"
   bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
@@ -341,7 +341,9 @@ printf '%s\n' "${hyprshare_makedepends[@]}" | grep -Fxq "hypxrland-headers=$hypx
 rg -qF '_pc_dir=/usr/lib/hypxrland/pkgconfig' "$hyprshare"
 rg -qF 'make HYPRLAND_PC_DIR=$_pc_dir GLAZE_INCLUDE=' "$hyprshare"
 rg -qF '"$pkgdir/usr/lib/hypxrland/plugins/$pkgname/$pkgname.so"' "$hyprshare"
-rg -qF 'grep -aFq "$commit" build/hyprshare-v4.so' "$hyprshare"
+rg -qF 'grep -aFq "$commit" "$so"' "$hyprshare"
+rg -qF 'local sos=(build/hyprshare*.so)' "$hyprshare"
+rg -qF '(( ${#sos[@]} != 1 ))' "$hyprshare"
 
 xdph=pkgbuilds/xdg-desktop-portal-hyprland-hypxr/PKGBUILD
 mapfile -t xdph_provides < <(cd "${xdph%/PKGBUILD}" && bash -c 'source PKGBUILD; printf "%s\n" "${provides[@]}"')

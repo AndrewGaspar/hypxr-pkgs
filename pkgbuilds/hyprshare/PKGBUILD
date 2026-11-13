@@ -13,9 +13,9 @@
 # snapshot; the exact hypxrland dependency keeps the pair in step.
 
 pkgname=hyprshare
-_commit=f82d095e45dda325b7972039a9d6f273a45bc8c6
-pkgver=0.r7.gf82d095e4
-pkgrel=2
+_commit=cd93406952ff18656b64da41707667326be789c9
+pkgver=0.r8.gcd9340695
+pkgrel=1
 pkgdesc='Switch what a screenshare shows without restarting it, for HypXRland'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/hyprshare'
@@ -26,17 +26,29 @@ depends=(
   'libstdc++'
   'lua'
   'wayland'
-  'hypxrland=0.56.2.r469.g7ac272db9-1'
+  'hypxrland=0.56.2.r469.g7ac272db9-2'
 )
 makedepends=(
-  'hypxrland-headers=0.56.2.r469.g7ac272db9-1'
+  'hypxrland-headers=0.56.2.r469.g7ac272db9-2'
   'pkgconf'
 )
 options=('!lto' '!debug')
 source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
-sha256sums=('a3e98ddbe16c8139c1bafb903c02dfaa4fe0be29320ee02156fa6f87b469df5f')
+sha256sums=('69be6b080fadb8c95b6bb32d46a564301388cf4ab997f1f0dc51523b06757b3e')
 
 _pc_dir=/usr/lib/hypxrland/pkgconfig
+
+# The Makefile versions its output (build/hyprshare-v5.so) so a dev build never
+# overwrites a .so a live session has dlopened. Take the one it built, and stop
+# if that is not exactly one file.
+_plugin_so() {
+  local sos=(build/hyprshare*.so)
+  if (( ${#sos[@]} != 1 )) || [[ ! -f ${sos[0]} ]]; then
+    echo "expected exactly one build/hyprshare*.so, found: ${sos[*]}" >&2
+    return 1
+  fi
+  printf '%s\n' "${sos[0]}"
+}
 
 prepare() {
   cd "$pkgname-$_commit"
@@ -52,22 +64,23 @@ build() {
   # HYPRLAND_PC_DIR takes the include paths from HypXRland's pkg-config file,
   # not a source tree. glaze is not reached through any installed header.
   make HYPRLAND_PC_DIR=$_pc_dir GLAZE_INCLUDE=
-  [[ -f build/hyprshare-v4.so ]]
+  _plugin_so >/dev/null
 }
 
 check() {
   cd "$pkgname-$_commit"
-  local commit
+  local commit so
+  so=$(_plugin_so)
   commit=$(sed -n 's/^#define GIT_COMMIT_HASH *"\(.*\)"$/\1/p' \
     /usr/lib/hypxrland/include/hyprland/src/version.h)
   [[ -n $commit ]]
   # The plugin carries the hash of the headers it was built against.
-  grep -aFq "$commit" build/hyprshare-v4.so
+  grep -aFq "$commit" "$so"
   if [[ -r /usr/include/hyprland/src/version.h ]]; then
     local stock
     stock=$(sed -n 's/^#define GIT_COMMIT_HASH *"\(.*\)"$/\1/p' /usr/include/hyprland/src/version.h)
-    if [[ $stock != "$commit" ]] && grep -aFq "$stock" build/hyprshare-v4.so; then
-      echo "hyprshare-v4.so was built against stock Hyprland's headers" >&2
+    if [[ $stock != "$commit" ]] && grep -aFq "$stock" "$so"; then
+      echo "$so was built against stock Hyprland's headers" >&2
       exit 1
     fi
   fi
@@ -75,7 +88,9 @@ check() {
 
 package() {
   cd "$pkgname-$_commit"
-  install -Dm755 build/hyprshare-v4.so \
+  local so
+  so=$(_plugin_so)
+  install -Dm755 "$so" \
     "$pkgdir/usr/lib/hypxrland/plugins/$pkgname/$pkgname.so"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
