@@ -17,7 +17,7 @@
 pkgname=omarchy-hyprland-titlebars-hypxr
 _name=omarchy-hyprland-titlebars
 pkgver=0.2.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Titlebars for Omarchy's floating workspaces, built for HypXRland"
 arch=('x86_64')
 url='https://github.com/omacom/omarchy-hyprland-titlebars'
@@ -28,12 +28,12 @@ depends=(
   'libstdc++'
   'hyprlang'
   'hyprutils'
-  'hypxrland=0.56.2.r469.g7ac272db9-1'
+  'hypxrland=0.56.2.r469.g7ac272db9-2'
   'omarchy-hyprland-titlebars'
 )
 makedepends=(
   'cmake'
-  'hypxrland-headers=0.56.2.r469.g7ac272db9-1'
+  'hypxrland-headers=0.56.2.r469.g7ac272db9-2'
   'pkgconf'
 )
 options=('!lto' '!debug')

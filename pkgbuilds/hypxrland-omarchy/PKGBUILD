@@ -2,7 +2,7 @@
 
 pkgname=hypxrland-omarchy
 pkgver=1.1.0
-pkgrel=10
+pkgrel=11
 pkgdesc='Omarchy XR session installed beside the stable Omarchy session'
 arch=('any')
 url='https://github.com/AndrewGaspar/Hyprland'
@@ -16,11 +16,11 @@ license=('MIT')
 # built for HypXRland; the stock one only loads into stock Hyprland.
 depends=(
   'hypxrland-stack'
-  'monado-xreal>=25.1.0.20261102.1.g76c63baca-5'
+  'monado-xreal>=25.1.0.20261102.1.g76c63baca-6'
   'omarchy-hyprland-titlebars-hypxr'
   'omarchy>=4.0.0'
   'omarchy<4.6'
-  'xreal-ctl>=0.20261111.1.g7ac272db9-1'
+  'xreal-ctl>=0.20261111.1.g7ac272db9-2'
 )
 makedepends=('desktop-file-utils')
 source=(
