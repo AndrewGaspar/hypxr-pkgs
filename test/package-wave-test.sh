@@ -108,25 +108,25 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 # The aquamarine 0.15.0 (libaquamarine.so=14) rebuild of hypxrland re-versioned
 # the whole wave for that reason.
 declare -A expected_pkgrel=(
-  [hyprpad]=7
-  [hyprshare]=1
-  [hypxr-keyring]=11
-  [hypxrcompose]=10
-  [hypxrhud]=10
-  [hypxrland]=2
-  [hypxrland-legacy-config]=10
-  [hypxrland-omarchy]=11
-  [hypxrland-stack]=11
-  [hypxrpaper]=11
-  [hypxrva]=11
-  [hypxrvoice]=10
-  [hypxrvoice-model-base-en]=11
-  [monado-xreal]=6
-  [omarchy-hyprland-titlebars-hypxr]=3
-  [voxtype-hypxr]=9
-  [wivrn-hypxr]=10
-  [xdg-desktop-portal-hyprland-hypxr]=1
-  [xreal-ctl]=2
+  [hyprpad]=1
+  [hyprshare]=2
+  [hypxr-keyring]=12
+  [hypxrcompose]=11
+  [hypxrhud]=11
+  [hypxrland]=3
+  [hypxrland-legacy-config]=11
+  [hypxrland-omarchy]=12
+  [hypxrland-stack]=12
+  [hypxrpaper]=12
+  [hypxrva]=12
+  [hypxrvoice]=11
+  [hypxrvoice-model-base-en]=12
+  [monado-xreal]=1
+  [omarchy-hyprland-titlebars-hypxr]=4
+  [voxtype-hypxr]=10
+  [wivrn-hypxr]=11
+  [xdg-desktop-portal-hyprland-hypxr]=2
+  [xreal-ctl]=3
 )
 for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
@@ -134,14 +134,14 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r469.g7ac272db9-2'
-  'hypxrcompose>=0.20260820.1.gf75ccd4ec-10'
-  'hypxrhud>=0.20260816.1.gf96d0e794-10'
-  'hypxrpaper>=0.20260704.1.g5cae848cd-11'
-  'hypxrva>=0.20260803.1.gbba2c5f8b-11'
-  'hypxrvoice>=0.20260812.1.g7ce7d33b2-10'
-  'hypxrvoice-model-base-en>=1.0.0-11'
-  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-10'
+  'hypxrland>=0.56.2.r469.g7ac272db9-3'
+  'hypxrcompose>=0.20260820.1.gf75ccd4ec-11'
+  'hypxrhud>=0.20260816.1.gf96d0e794-11'
+  'hypxrpaper>=0.20260704.1.g5cae848cd-12'
+  'hypxrva>=0.20260803.1.gbba2c5f8b-12'
+  'hypxrvoice>=0.20260812.1.g7ce7d33b2-11'
+  'hypxrvoice-model-base-en>=1.0.0-12'
+  'wivrn-hypxr>=26.6.2.20260820.1.g3729c7b31-11'
 )
 mapfile -t actual_stack_deps < <(
   cd pkgbuilds/hypxrland-stack
@@ -192,7 +192,7 @@ for hud_doc in keys-overlay.md cmd-ticker.md battery-wivrn.md; do
 done
 
 legacy_package=pkgbuilds/hypxrland-legacy-config
-[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-10" ]]
+[[ $(cd "$legacy_package" && bash -c 'source PKGBUILD; printf "%s-%s" "$pkgver" "$pkgrel"') == "4.0.0-11" ]]
 mapfile -t legacy_dependencies < <(
   cd "$legacy_package"
   bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}"'
@@ -216,6 +216,11 @@ done
 
 rg -q "'omarchy>=4\.0\.0'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'omarchy<4\.6'" pkgbuilds/hypxrland-omarchy/PKGBUILD
+# Monado's flight recorder compresses with zstd, and its helper scripts land
+# where xreal-capture searches.
+rg -qx "  'zstd'" pkgbuilds/monado-xreal/PKGBUILD
+rg -qF '"$pkgdir/usr/share/monado-xreal/scripts/$script"' pkgbuilds/monado-xreal/PKGBUILD
+rg -qF "grep -q '^XREAL_AIR_ZSTD_FOUND:INTERNAL=1\$' build/CMakeCache.txt" pkgbuilds/monado-xreal/PKGBUILD
 rg -q "'hypxrland-stack'" pkgbuilds/hypxrland-omarchy/PKGBUILD
 rg -q "'monado-xreal: private" pkgbuilds/hypxrland-stack/PKGBUILD
 rg -qF '`hypxrland-omarchy` also installs `monado-xreal`' pkgbuilds/hypxrland-stack/README.md
