@@ -15,7 +15,7 @@
 pkgname=hyprshare
 _commit=cd93406952ff18656b64da41707667326be789c9
 pkgver=0.r8.gcd9340695
-pkgrel=1
+pkgrel=2
 pkgdesc='Switch what a screenshare shows without restarting it, for HypXRland'
 arch=('x86_64')
 url='https://github.com/AndrewGaspar/hyprshare'
@@ -26,10 +26,10 @@ depends=(
   'libstdc++'
   'lua'
   'wayland'
-  'hypxrland=0.56.2.r469.g7ac272db9-2'
+  'hypxrland=0.56.2.r469.g7ac272db9-3'
 )
 makedepends=(
-  'hypxrland-headers=0.56.2.r469.g7ac272db9-2'
+  'hypxrland-headers=0.56.2.r469.g7ac272db9-3'
   'pkgconf'
 )
 options=('!lto' '!debug')
