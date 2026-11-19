@@ -113,7 +113,7 @@ declare -A expected_pkgrel=(
   [hypxr-keyring]=12
   [hypxrcompose]=11
   [hypxrhud]=11
-  [hypxrland]=3
+  [hypxrland]=1
   [hypxrland-legacy-config]=11
   [hypxrland-omarchy]=12
   [hypxrland-stack]=12
@@ -126,7 +126,7 @@ declare -A expected_pkgrel=(
   [voxtype-hypxr]=10
   [wivrn-hypxr]=11
   [xdg-desktop-portal-hyprland-hypxr]=2
-  [xreal-ctl]=3
+  [xreal-ctl]=1
 )
 for package in "${packages[@]}"; do
   actual_pkgrel=$(cd "pkgbuilds/$package" && bash -c 'source PKGBUILD; printf "%s" "$pkgrel"')
@@ -134,7 +134,7 @@ for package in "${packages[@]}"; do
 done
 
 expected_stack_deps=(
-  'hypxrland>=0.56.2.r469.g7ac272db9-3'
+  'hypxrland>=0.56.2.r475.g0af4a4fa2-1'
   'hypxrcompose>=0.20260820.1.gf75ccd4ec-11'
   'hypxrhud>=0.20260816.1.gf96d0e794-11'
   'hypxrpaper>=0.20260704.1.g5cae848cd-12'
@@ -373,7 +373,7 @@ xreal_commit=$(pkgbuild_value xreal-ctl '"$_commit"')
 [[ $(pkgbuild_value xreal-ctl '"${source[0]}"') == "$(pkgbuild_value hypxrland '"${source[0]}"')" ]]
 [[ $(pkgbuild_value xreal-ctl '"${sha256sums[0]}"') == "$(pkgbuild_value hypxrland '"${sha256sums[0]}"')" ]]
 (( $(pkgbuild_value xreal-ctl '"${#source[@]}"') == 1 ))
-[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261111.1.g${xreal_commit:0:9}" ]]
+[[ $(pkgbuild_value xreal-ctl '"$pkgver"') == "0.20261119.1.g${xreal_commit:0:9}" ]]
 [[ $(pkgbuild_value xreal-ctl '"$url"') == "$(pkgbuild_value hypxrland '"$url"')" ]]
 mapfile -t xreal_depends < <(pkgbuild_value xreal-ctl '"${depends[@]}"')
 [[ ${xreal_depends[*]} == "glibc hidapi" ]]

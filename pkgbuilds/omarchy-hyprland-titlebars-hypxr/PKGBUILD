@@ -28,12 +28,12 @@ depends=(
   'libstdc++'
   'hyprlang'
   'hyprutils'
-  'hypxrland=0.56.2.r469.g7ac272db9-3'
+  'hypxrland=0.56.2.r475.g0af4a4fa2-1'
   'omarchy-hyprland-titlebars'
 )
 makedepends=(
   'cmake'
-  'hypxrland-headers=0.56.2.r469.g7ac272db9-3'
+  'hypxrland-headers=0.56.2.r475.g0af4a4fa2-1'
   'pkgconf'
 )
 options=('!lto' '!debug')
