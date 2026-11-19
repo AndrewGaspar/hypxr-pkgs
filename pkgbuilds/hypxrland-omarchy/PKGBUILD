@@ -20,7 +20,7 @@ depends=(
   'omarchy-hyprland-titlebars-hypxr'
   'omarchy>=4.0.0'
   'omarchy<4.6'
-  'xreal-ctl>=0.20261111.1.g7ac272db9-3'
+  'xreal-ctl>=0.20261119.1.g0af4a4fa2-1'
 )
 makedepends=('desktop-file-utils')
 source=(
