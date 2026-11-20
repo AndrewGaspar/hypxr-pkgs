@@ -6,9 +6,6 @@
 # Setup directories
 ARCH=${ARCH:-x86_64}
 MIRROR=${MIRROR:-edge}
-# Omarchy ring for build-time dependencies (see bin/build); the image's Arch
-# mirror was chosen from the same ring.
-OMARCHY_RING=${OMARCHY_RING:-$MIRROR}
 DRY_RUN=${DRY_RUN:-false}
 PKGBUILDS_DIR=${PKGBUILDS_DIR:-/pkgbuilds}
 BUILD_OUTPUT_DIR=${BUILD_OUTPUT_DIR:-/build-output/$MIRROR/$ARCH}
@@ -17,6 +14,10 @@ HELPERS_DIR=${HELPERS_DIR:-/helpers}
 SRC_DIR=${SRC_DIR:-/src}
 
 source "$HELPERS_DIR/package-metadata.sh"
+
+# Omarchy ring for build-time dependencies (see bin/build); the image's Arch
+# mirror was chosen from the same ring.
+OMARCHY_RING=${OMARCHY_RING:-$(channel_omarchy_ring "$MIRROR")}
 
 if [[ "$DRY_RUN" != true ]]; then
   # Import GPG keys
