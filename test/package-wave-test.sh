@@ -110,7 +110,7 @@ rg -q 'resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base\.en\.bin' \
 declare -A expected_pkgrel=(
   [hyprpad]=1
   [hyprshare]=2
-  [hypxr-keyring]=12
+  [hypxr-keyring]=1
   [hypxrcompose]=11
   [hypxrhud]=11
   [hypxrland]=1
