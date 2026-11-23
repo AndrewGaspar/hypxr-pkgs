@@ -97,6 +97,25 @@ package_has_pkgbuild() {
   [[ -f "$pkgdir/PKGBUILD" ]]
 }
 
+# HypXR channels, and the Omarchy ring each one builds against:
+#   edge   - the latest HypXR for Omarchy stable (published from master)
+#   next   - HypXR for Omarchy edge, the next Omarchy release (from next)
+#   stable - edge's fast-ring packages, promoted after hardware testing
+channel_valid() {
+  case "$1" in
+    edge | next | stable) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+channel_omarchy_ring() {
+  case "$1" in
+    next) echo edge ;;
+    edge | stable) echo stable ;;
+    *) return 1 ;;
+  esac
+}
+
 package_builds_for_mirror() {
   local pkgdir="$1"
   local mirror="$2"
@@ -105,7 +124,7 @@ package_builds_for_mirror() {
   package_has_metadata "$pkgdir" || return 1
 
   case "$mirror" in
-    edge)
+    edge | next)
       return 0
       ;;
     stable)

@@ -28,20 +28,31 @@ rg -q '^\[hypxr\]$' build/build.sh ||
   fail "published HypXR dependency repository is missing"
 rg -q '^\[omarchy\]$' build/build.sh ||
   fail "public Omarchy dependency repository is missing"
-# The Omarchy ring defaults to the HypXR ring and may target another one
-# (the edge channel builds for Omarchy stable while that is Omarchy 4).
+# Each channel builds against one Omarchy ring: edge (master) for Omarchy
+# stable, next (the next branch) for Omarchy edge.
 rg -q 'pkgs\.omarchy\.org/\$OMARCHY_RING/' build/build.sh ||
   fail "Omarchy dependency repository does not follow OMARCHY_RING"
-rg -q '^OMARCHY_RING=\$\{OMARCHY_RING:-\$MIRROR\}$' build/build.sh ||
-  fail "Omarchy dependency ring does not default to the HypXR ring"
-rg -q '^OMARCHY_RING=\$\{OMARCHY_RING:-\$MIRROR\}$' bin/build ||
-  fail "builder's Omarchy ring does not default to the HypXR ring"
+rg -q '^OMARCHY_RING=\$\{OMARCHY_RING:-\$\(channel_omarchy_ring "\$MIRROR"\)\}$' build/build.sh ||
+  fail "Omarchy dependency ring does not follow the channel"
+rg -q '^OMARCHY_RING=\$\{OMARCHY_RING:-\$\(channel_omarchy_ring "\$MIRROR"\)\}$' bin/build ||
+  fail "builder's Omarchy ring does not follow the channel"
+(
+  source helpers/package-metadata.sh
+  [[ $(channel_omarchy_ring edge) == stable ]] || fail "edge does not build for Omarchy stable"
+  [[ $(channel_omarchy_ring stable) == stable ]] || fail "stable does not build for Omarchy stable"
+  [[ $(channel_omarchy_ring next) == edge ]] || fail "next does not build for Omarchy edge"
+  ! channel_omarchy_ring bogus >/dev/null || fail "unknown channel has an Omarchy ring"
+)
 rg -q 'build_docker_image "\$BUILD_DIR" "\$ARCH" "\$OMARCHY_RING"' bin/build ||
   fail "builder image's Arch mirror does not follow OMARCHY_RING"
 rg -q -- '-e OMARCHY_RING="\$OMARCHY_RING"' bin/build ||
   fail "builder does not pass OMARCHY_RING into the container"
-rg -q '^  OMARCHY_RING: stable$' .github/workflows/packages.yml ||
-  fail "edge wave does not build against Omarchy stable"
+rg -qF "MIRROR: \${{ (github.ref == 'refs/heads/next' || github.base_ref == 'next') && 'next' || 'edge' }}" \
+  .github/workflows/packages.yml ||
+  fail "workflow does not pick the channel from the branch"
+if rg -q '^  OMARCHY_RING:' .github/workflows/packages.yml; then
+  fail "workflow pins an Omarchy ring instead of following the channel"
+fi
 
 rg -q 'sign-database' bin/release || fail "release does not sign databases"
 rg -q 'hypxr\.db\.tar\.zst\.sig' build/sign-database.sh ||

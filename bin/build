@@ -8,6 +8,7 @@ BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
 source "$BUILD_ROOT/helpers/message-helpers.sh"
 source "$BUILD_ROOT/helpers/docker-helpers.sh"
 source "$BUILD_ROOT/helpers/paths.sh"
+source "$BUILD_ROOT/helpers/package-metadata.sh"
 
 print_header "HypXR Package Builder"
 
@@ -23,8 +24,8 @@ while [[ $# -gt 0 ]]; do
     ;;
   --mirror)
     MIRROR="$2"
-    if [[ "$MIRROR" != "edge" && "$MIRROR" != "stable" ]]; then
-      print_error "Invalid mirror: $MIRROR (must be 'edge' or 'stable')"
+    if ! channel_valid "$MIRROR"; then
+      print_error "Invalid mirror: $MIRROR (must be 'edge', 'next' or 'stable')"
       exit 1
     fi
     update_arch_paths
@@ -48,13 +49,14 @@ while [[ $# -gt 0 ]]; do
     echo ""
     echo "Options:"
     echo "  --arch <arch>        Target architecture (x86_64 or aarch64, default: x86_64)"
-    echo "  --mirror <mirror>    Mirror to use (edge or stable, default: edge)"
+    echo "  --mirror <mirror>    Mirror to use (edge, next or stable, default: edge)"
     echo "  --package <names>    Build only the specified package(s) (space-separated)"
     echo "  --dry-run           Show what would build without running makepkg"
     echo "  -h, --help           Show this help message"
     echo ""
     echo "This script builds packages from pkgbuilds/ based on .omarchy/package.json:"
     echo "  --mirror edge:   builds packages not marked skip_build=true"
+    echo "  --mirror next:   the same, against Omarchy's edge ring"
     echo "  --mirror stable: builds fast-ring packages not marked skip_build=true"
     echo "  --package:       explicitly builds selected packages, even with skip_build=true"
     echo ""
@@ -77,9 +79,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 # The Omarchy ring the packages build against: its Arch snapshot mirror and
-# its pkgs.omarchy.org repository. Defaults to the HypXR channel's own name;
-# OMARCHY_RING=stable builds the edge channel for Omarchy's stable release.
-OMARCHY_RING=${OMARCHY_RING:-$MIRROR}
+# its pkgs.omarchy.org repository. Each channel has one (see
+# channel_omarchy_ring); OMARCHY_RING overrides it.
+OMARCHY_RING=${OMARCHY_RING:-$(channel_omarchy_ring "$MIRROR")}
 if [[ "$OMARCHY_RING" != "edge" && "$OMARCHY_RING" != "stable" ]]; then
   print_error "Invalid OMARCHY_RING: $OMARCHY_RING (must be 'edge' or 'stable')"
   exit 1
